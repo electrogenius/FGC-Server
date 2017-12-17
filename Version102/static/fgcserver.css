@@ -1,0 +1,293 @@
+html *{
+   font-size: 2.6vw;
+   font-family: monospace bold;
+}        
+/* Each row of buttons is 25% of the keyboard height. */
+.btn-row {
+    height:25%;
+}
+/* Define a holder for each button. The padding gives us a space between buttons. */
+.btn-holder {
+    height:25%;
+    background-color:black;
+    padding:0.1%;        
+}
+/* Define our basic button style */
+.btn-basic {
+    height:100%;
+    border: 1.5vh  ridge ;
+    background-color:grey;
+    font-family: Verdana;
+    color:white;
+}
+/* Define our unselected day key style.*/
+.btn_day {
+    border-color:grey;
+}
+/* Define our delete 'confirm' and 'cancel' key style. */
+.btn_confirm_cancel_delete {
+    border-color:red;
+    opacity:1;
+}
+/* Define our program/man 'confirm' and 'cancel' key style. */
+.btn_confirm_cancel_program_man {
+    border-color:red;
+    opacity:1;
+}
+/* Define our active 'day' entry key style. */
+.btn_day_entry {
+    border-color:red;
+    opacity:1;
+}
+/* Define our unselected digit key style. */
+.btn_digit {
+    border-color:grey;
+    opacity:0.8;
+}
+/* When a digit button is clicked we keep the key as is. */
+.btn-digit-clicked,  .btn-digit-clicked:focus {
+    color:white;
+}
+/* Define our active 'on at' entry key style. */
+.btn_on_at_entry {
+    border-color:red;
+    opacity:1;
+}
+/* Define our active 'off at' entry key style. */
+.btn_off_at_entry {
+    border-color:red;
+    opacity:1;
+}
+/* Define our active function key style. */
+.btn_function {
+    border-color:cyan;
+}
+/* Define our active select key style. */
+.btn-select {
+    border-color:cyan;
+}
+/* Define our blank select key style. */
+.btn_select_blank {
+    border-color:cyan;
+    opacity:0.8;
+}
+/* When a select button is clicked we keep the key as is. */
+.btn-select-clicked,  .btn-select-clicked:focus {
+    color:white;
+}
+/* Define our rad mode indicator style. */
+.btn-rad-mode {
+    border-color:seashell;
+}
+/* Define our rad zone key style.*/
+.btn_zone {
+    border-color:wheat;
+}
+/* Define our ufh mode indicator style. */
+.btn-ufh-mode {
+    border-color:wheat;
+}
+/* Define our ufh zone key style. */
+.btn-ufh-zone {
+    border-color:wheat;
+}
+/* When a zone button is clicked we turn the border orange. */
+.btn-zone-clicked,  .btn-zone-clicked:focus {
+    border-color:orange;
+    color:white;
+}
+.btn-solid-green {
+    background-color:green;
+}       
+.btn-solid-red {
+    background-color:red;
+}
+.btn-flash-green {
+    animation: blink 1s step-end infinite alternate;
+    -moz-animation: blink 1s step-end infinite alternate;
+    -webkit-animation: blink 1s step-end infinite alternate;
+    background-color:green;           
+}
+.btn-flash-red {
+    animation: blink 1s step-end infinite alternate;
+    -moz-animation: blink 1s step-end infinite alternate;
+    -webkit-animation: blink 1s step-end infinite alternate;
+    background-color:red;           
+}
+/* Fade buttons and keep text white when we hover over them */
+.btn:hover {
+    opacity:0.8;
+    color:white;
+}
+body, html, .container-fluid {
+         height: 100%;
+}
+@-webkit-keyframes blink { 
+    50% { background-color: grey; } 
+}
+@keyframes blink { 
+    50% { background-color: grey;} 
+}
+.flex-container-space-between {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+}
+.flex-container-flex-start {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+    height: 100%;
+}
+.flex-container-flex-end {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: flex-end;
+    justify-content: flex-end;
+    width: 100%;
+    height: 100%;
+}
+.cyan_text_field {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:cyan;
+}
+.on_at_field {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:cyan;
+    font-family: monospace bold ;
+    font-size: 2.6vw;
+}
+.on_at_field_selected {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:red;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+}
+.on_at_field_selected_cursor {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:red;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+    -webkit-animation: 1s on_at_cursor_blink step-end infinite;
+    -moz-animation: 1s on_at_cursor_blink step-end infinite;
+}
+@-webkit-keyframes on_at_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+@-moz-keyframes on_at_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+
+.off_at_field {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:cyan;
+    font-family: monospace bold ;
+    font-size: 2.6vw;
+}
+.off_at_field_selected {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:red;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+}
+.off_at_field_selected_cursor {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:red;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+    -webkit-animation: 1s off_at_cursor_blink step-end infinite;
+    -moz-animation: 1s off_at_cursor_blink step-end infinite;
+}
+@-webkit-keyframes off_at_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+@-moz-keyframes off_at_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+
+.days_field {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+    color:cyan;
+}
+.days_field_selected {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+    color:red;
+}
+.days_field_selected_cursor {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:yellow;
+    font-family: monospace bold;
+    font-size: 2.6vw;
+    -webkit-animation: 1s day_cursor_blink step-end infinite;
+    -moz-animation: 1s day_cursor_blink step-end infinite;
+}
+@-webkit-keyframes day_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+@-moz-keyframes day_cursor_blink {
+    from, to { color: transparent }
+    50% { color: red }
+}
+
+.flex-item-text-left {
+    height: 100%;
+    background-color:black;
+    text-align: left;
+    color:yellow;
+}
+.flex-item-text-right {
+    height: 100%;
+    background-color:black;
+    text-align: right;
+    color:yellow;
+    padding-right: 0.5%;
+}
+.keyboard {
+    height: 100%;
+}
+.rad-keyboard {
+    height: 100%;
+}
+.ufh-keyboard {
+    height: 100%;
+}
+.hide_keyboard {
+    display: none;
+}
+.hide-display {
+    display: none;
+}
