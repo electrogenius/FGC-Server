@@ -366,6 +366,7 @@ $(document).ready(function (){
                 // Flag we sent it.
                 allZonesData [zone]["update"] == "sent";
 
+                // Update the server with the new zone data.
                 var sendMessage = {"command":"zone_update", "payload":allZonesData [zone]}
                 // Send to the server.
                 allZonesData [zone]["command"] = "zone_update";
