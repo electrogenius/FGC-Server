@@ -407,18 +407,19 @@ def handleMessage(msg):
     # We mustn't alter data if another thread is using it.
     with zoneDataLock :
         msg = json.loads (msg)
-        print msg +"\n"
-        zone = msg ["zone"]
-        if (msg ["command"] == "zone_request") and (zone in allZonesData) :
+        print msg
+        if (msg ["command"] == "zone_request") :
+            zone = msg ["payload"]["zone"]
             allZonesData [zone]["command"] = "zone_reply"
             send (json.dumps (allZonesData [zone]))
     
         elif (msg ["command"] == "zone_update") :
-            allZonesData [zone] = deepcopy(msg)
+            zone = msg ["payload"]["zone"] 
+            allZonesData [zone] = deepcopy(msg ["payload"])
             allZonesData [zone]["update"] = "completed"
             print allZonesData [zone]
             zoneFile = open ("zonetimes/" + zone, "w")
-            zoneFile.write (json.dumps (allZonesData [zone]))
+            zoneFile.write (json.dumps (allZonesData [zone]))     
             zoneFile.close ()
 
         elif (msg ["command"] == "zone_check") :
@@ -430,13 +431,13 @@ def handleMessage(msg):
 @app.route("/")
 def hello():
    return render_template("fgcserver.html")
-
+ 
 if __name__ == "__main__":
-    # Read all the zone files into allZonesData.
+    # Read all the zone files into allZonesData. 
     loadZones ()
     # When we have all the zone data start task to check for zone operation.
-    socketio.start_background_task (target = checkZonesThread)
-    #app.run(host='0.0.0.0', port=80, debug=True)
+    socketio.start_background_task (target = checkZonesThread)     
+    #app.run(host='0.0.0.0', port=80, debug=True) 
     socketio.run(app, host='0.0.0.0', port=80, debug=True)
    
    

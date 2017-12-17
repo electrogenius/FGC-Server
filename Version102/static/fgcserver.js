@@ -91,10 +91,8 @@ $(document).ready(function (){
         } else {
             // Tell server which zone is required. When it responds the data
             // will be displayed.
-            var sendMessage = {"command":"zone_update", "payload":{"zone":this.id}}
-            
-            var request = {"command":"zone_request", "zone":this.id};
-            socket.send (JSON.stringify(request));
+            var sendMessage = {"command":"zone_request", "payload":{"zone":this.id}}
+            socket.send (JSON.stringify(sendMessage));
         }
     });
         
@@ -368,10 +366,7 @@ $(document).ready(function (){
 
                 // Update the server with the new zone data.
                 var sendMessage = {"command":"zone_update", "payload":allZonesData [zone]}
-                // Send to the server.
-                allZonesData [zone]["command"] = "zone_update";
-                socket.send (JSON.stringify (allZonesData [zone]));
-                //console.log ("UPDATE",allZonesData [zone]);
+                socket.send (JSON.stringify (sendMessage));
             }
         }
     }
