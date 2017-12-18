@@ -340,9 +340,10 @@ def checkZonesThread ():
 
 
 def sendConsoleMessage (message) :
-    allZonesData ["zone0"]["command"] = "console_message"
-    allZonesData ["zone0"]["debug_text"] = message
-    socketio.send (json.dumps (allZonesData ["zone0"]))
+    #allZonesData ["zone0"]["command"] = "console_message"
+    #allZonesData ["zone0"]["debug_text"] = message
+    #socketio.send (json.dumps (allZonesData ["zone0"]))
+    send (json.dumps ({"command":"console_message", "payload":message}))
 
 
 
@@ -408,10 +409,10 @@ def handleMessage(msg):
     with zoneDataLock :
         msg = json.loads (msg)
         print msg
+        sendConsoleMessage (msg)
         if (msg ["command"] == "zone_request") :
             zone = msg ["payload"]["zone"]
-            allZonesData [zone]["command"] = "zone_reply"
-            send (json.dumps (allZonesData [zone]))
+            send (json.dumps ({"command":"zone_reply", "payload":allZonesData [zone]}))
     
         elif (msg ["command"] == "zone_update") :
             zone = msg ["payload"]["zone"] 
@@ -423,9 +424,8 @@ def handleMessage(msg):
             zoneFile.close ()
 
         elif (msg ["command"] == "zone_check") :
-            checkTimedZone (msg)
-            msg ["command"] = "zone_reply"
-            send (json.dumps (msg))
+            checkTimedZone (msg ["payload"])
+            send (json.dumps ({"command":"zone_reply", "payload":msg ["payload"]}))
         
  
 @app.route("/")
@@ -442,7 +442,7 @@ if __name__ == "__main__":
    
    
    
-################################################################################
+################################################################################     
 #
 # Function: 
 #

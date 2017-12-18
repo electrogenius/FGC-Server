@@ -37,8 +37,9 @@ $(document).ready(function (){
             case "zone_reply":
                 // The server has replied to a request for data for a zone.
                 // Save the original data. Use a deep copy to copy actual data
-                // and not just the reference.
-                zoneData = JSON.parse(msg);
+                // and not just the reference as we may modify zoneData.
+                zoneData = JSON.parse(msg).payload;
+                //console.log ("1",zoneData);
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData)); 
                 displayMode ();
                 displayStatus ();
@@ -46,7 +47,7 @@ $(document).ready(function (){
                 break;
             
             case "console_message":
-                console.log ("MESSAGE",messageData.debug_text);
+                console.log ("SERVER", messageData.payload);
                 break;
         }
     });
@@ -91,8 +92,8 @@ $(document).ready(function (){
         } else {
             // Tell server which zone is required. When it responds the data
             // will be displayed.
-            var sendMessage = {"command":"zone_request", "payload":{"zone":this.id}}
-            socket.send (JSON.stringify(sendMessage));
+            //var sendMessage = {"command":"zone_request", "payload":{"zone":this.id}}
+            socket.send (JSON.stringify({"command":"zone_request", "payload":{"zone":this.id}}));
         }
     });
         
@@ -249,13 +250,17 @@ $(document).ready(function (){
                 // If we're on a zone select we need to re-select it and
                 // get the server to check the zone so that we get any
                 // change in state that new timers may have caused.
+                // Checking the zone does not cause the server to change
+                // the actual zone hardware state. This will only happen
+                // when we are "Finished".
                 if ((previousKeyboard == "rad_zone_selected_keyboard")
                     ||
                     (previousKeyboard == "ufh_zone_selected_keyboard")) {
                     $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
-                    //displayStatus ();
-                    zoneData ["command"] = "zone_check";
-                    socket.send (JSON.stringify (zoneData));
+                    // Do a zone check this will cause the server to send the zone
+                    // data to us which will then be re-displayed.
+                   // var sendMessage = {"command":"zone_check", "payload":zoneData}
+                    socket.send (JSON.stringify ({"command":"zone_check", "payload":zoneData}));
                 }
                 break;
         }
@@ -365,8 +370,8 @@ $(document).ready(function (){
                 allZonesData [zone]["update"] == "sent";
 
                 // Update the server with the new zone data.
-                var sendMessage = {"command":"zone_update", "payload":allZonesData [zone]}
-                socket.send (JSON.stringify (sendMessage));
+               // var sendMessage = {"command":"zone_update", "payload":allZonesData [zone]}
+                socket.send (JSON.stringify ({"command":"zone_update", "payload":allZonesData [zone]}));
             }
         }
     }
