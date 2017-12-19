@@ -39,17 +39,27 @@ $(document).ready(function (){
                 // Save the original data. Use a deep copy to copy actual data
                 // and not just the reference as we may modify zoneData.
                 zoneData = JSON.parse(msg).payload;
-                //console.log ("1",zoneData);
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData)); 
+                console.log ("STATUS",allZonesData);
                 displayMode ();
                 displayStatus ();
-                //console.log ("STATUS",allZonesData);
                 break;
             
-            case "console_message":
+                case "console_message":
                 console.log ("SERVER", messageData.payload);
                 break;
-        }
+
+                case "zone_states":
+                allZonesData = JSON.parse(msg).payload;
+                console.log ("STATES", allZonesData);
+                for (var zone in allZonesData) {
+                    if (allZonesData [zone]["zone_state"] == "on") {
+                        $("#current_keyboard #" + zone).addClass("btn_solid_green");
+                    }
+                }
+                
+                break;
+            }
     });
     
     // Is this a function key?
@@ -60,6 +70,9 @@ $(document).ready(function (){
                 switchToKeyboard ("rad_select_keyboard");
                 // Clear any existing data.
                 allZonesData = {};
+                // Get the state of each zone from server so that we ca indicate
+                // which zones are on.
+                socket.send (JSON.stringify ({"command":"zone_state_request"}));
                 break;
         }
     });
@@ -83,17 +96,20 @@ $(document).ready(function (){
         // Set select band for this button.
         $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
         
-        // Have we already loaded this zone?
+        // Make sure this is a valid zone key.
         if (this.id in allZonesData) {
-            // Use the existing data.
-            zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
-            displayMode ();
-            displayStatus ();
-        } else {
-            // Tell server which zone is required. When it responds the data
-            // will be displayed.
-            //var sendMessage = {"command":"zone_request", "payload":{"zone":this.id}}
-            socket.send (JSON.stringify({"command":"zone_request", "payload":{"zone":this.id}}));
+            // Have we already loaded this zone? We know if a zone is loaded because
+            // it will have a key field of "zone" in it.
+            if ("zone" in allZonesData [this.id]) {
+                // Use the existing data.
+                zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
+                displayMode ();
+                displayStatus ();
+            } else {
+                // Tell server which zone is required. When it responds the data
+                // will be displayed.
+                socket.send (JSON.stringify({"command":"zone_data_request", "payload":{"zone":this.id}}));
+            }
         }
     });
         

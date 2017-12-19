@@ -96,19 +96,19 @@ html *{
     border-color:orange;
     color:white;
 }
-.btn-solid-green {
+.btn_solid_green {
     background-color:green;
 }       
-.btn-solid-red {
+.btn_solid_red {
     background-color:red;
 }
-.btn-flash-green {
+.btn_flash_green {
     animation: blink 1s step-end infinite alternate;
     -moz-animation: blink 1s step-end infinite alternate;
     -webkit-animation: blink 1s step-end infinite alternate;
     background-color:green;           
 }
-.btn-flash-red {
+.btn_flash_red {
     animation: blink 1s step-end infinite alternate;
     -moz-animation: blink 1s step-end infinite alternate;
     -webkit-animation: blink 1s step-end infinite alternate;

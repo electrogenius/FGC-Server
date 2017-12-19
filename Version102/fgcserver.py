@@ -301,12 +301,10 @@ def sendZoneStates ():
     zoneStates = {}
     # Scan through each zone and save the state (on or off).
     for zoneNumber in allZonesData :
-        zoneStates [zoneNumber] = allZonesData [zoneNumber]["zone_state"]
+        zoneStates [zoneNumber] = {"zone_state":allZonesData [zoneNumber]["zone_state"]}
 
     # Now send to client.
-    
-
-
+    send (json.dumps ({"command":"zone_states", "payload":zoneStates}))
 
 
 ################################################################################
@@ -340,9 +338,6 @@ def checkZonesThread ():
 
 
 def sendConsoleMessage (message) :
-    #allZonesData ["zone0"]["command"] = "console_message"
-    #allZonesData ["zone0"]["debug_text"] = message
-    #socketio.send (json.dumps (allZonesData ["zone0"]))
     send (json.dumps ({"command":"console_message", "payload":message}))
 
 
@@ -408,9 +403,8 @@ def handleMessage(msg):
     # We mustn't alter data if another thread is using it.
     with zoneDataLock :
         msg = json.loads (msg)
-        print msg
         sendConsoleMessage (msg)
-        if (msg ["command"] == "zone_request") :
+        if (msg ["command"] == "zone_data_request") :
             zone = msg ["payload"]["zone"]
             send (json.dumps ({"command":"zone_reply", "payload":allZonesData [zone]}))
     
@@ -426,6 +420,9 @@ def handleMessage(msg):
         elif (msg ["command"] == "zone_check") :
             checkTimedZone (msg ["payload"])
             send (json.dumps ({"command":"zone_reply", "payload":msg ["payload"]}))
+        
+        elif (msg ["command"] == "zone_state_request") :
+            sendZoneStates ()
         
  
 @app.route("/")
