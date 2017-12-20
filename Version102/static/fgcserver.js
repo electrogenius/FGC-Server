@@ -52,12 +52,8 @@ $(document).ready(function (){
                 case "zone_states":
                 allZonesData = JSON.parse(msg).payload;
                 console.log ("STATES", allZonesData);
-                for (var zone in allZonesData) {
-                    if (allZonesData [zone]["zone_state"] == "on") {
-                        $("#current_keyboard #" + zone).addClass("btn_solid_green");
-                    }
-                }
-                
+                displayStates ();
+
                 break;
             }
     });
@@ -70,7 +66,7 @@ $(document).ready(function (){
                 switchToKeyboard ("rad_select_keyboard");
                 // Clear any existing data.
                 allZonesData = {};
-                // Get the state of each zone from server so that we ca indicate
+                // Request the state of each zone from server so that we can indicate
                 // which zones are on.
                 socket.send (JSON.stringify ({"command":"zone_state_request"}));
                 break;
@@ -91,15 +87,17 @@ $(document).ready(function (){
                 switchToKeyboard ("rad_zone_selected_keyboard");
             }
         }
-        // Clear the select band from all zone buttons.
-        $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
-        // Set select band for this button.
-        $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
-        
         // Make sure this is a valid zone key.
         if (this.id in allZonesData) {
+            // Clear the select band from all zone buttons.
+            $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
+            // Set select band for this button.
+            $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
+            // Show which zones are on.
+            displayStates ();
+        
             // Have we already loaded this zone? We know if a zone is loaded because
-            // it will have a key field of "zone" in it.
+            // it will have a field of "zone" in it.
             if ("zone" in allZonesData [this.id]) {
                 // Use the existing data.
                 zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
@@ -273,9 +271,9 @@ $(document).ready(function (){
                     ||
                     (previousKeyboard == "ufh_zone_selected_keyboard")) {
                     $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
+                    displayStates ();
                     // Do a zone check this will cause the server to send the zone
                     // data to us which will then be re-displayed.
-                   // var sendMessage = {"command":"zone_check", "payload":zoneData}
                     socket.send (JSON.stringify ({"command":"zone_check", "payload":zoneData}));
                 }
                 break;
@@ -1123,6 +1121,31 @@ $(document).ready(function (){
     }
     
     
+    /******************************************************************************* 
+    * Function: displayStates ()
+    * 
+    * Parameters: None.
+    * 
+    * Returns: Nothing.
+    * 
+    * Globals modified: None.
+    * 
+    * Comments: Sets the background of any zone keys that are on to green.
+    * 
+    ********************************************************************************/
+
+    function displayStates () {
+        for (var zone in allZonesData) {
+            var key = $("#current_keyboard #" + zone);
+            if (key.length && (allZonesData [zone]["zone_state"] == "on")) {
+                key.addClass("btn_solid_green");
+            }
+        }
+        
+
+    }
+
+
     /******************************************************************************* 
     * Function: displayMode ()
     * 
