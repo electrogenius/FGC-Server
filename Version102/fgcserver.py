@@ -10,7 +10,6 @@ import time
 # to be able to convert the zone data to json to send to the browser.
 # Fields can have the following values:
 # "zone" - "zone0" to "zone30" - The hardware zone number.
-# "command" - "zone_request", "zone_reply" - client requests, server replies.
 # "update" - "completed", "pending", "sent".
 # "name" - the name of the room as defined in zoneNames.
 # "mode" - "man", "timer", "boost_man", "boost_man", "suspended"
@@ -22,12 +21,12 @@ import time
 
 basicZoneData = {
     "zone":"",
-    "command":"zone_reply",
     "update": "completed",
     "debug_text":"",
     "name":"",
     "mode":"man",
     "zone_state":"off",
+    "new_zone_state":"off",
     "next_on_time":0,
     "next_off_time":0,
     "boost_off_time":0,

@@ -43,6 +43,7 @@ $(document).ready(function (){
                 console.log ("STATUS",allZonesData);
                 displayMode ();
                 displayStatus ();
+                displayStates ();
                 break;
             
                 case "console_message":
@@ -87,27 +88,24 @@ $(document).ready(function (){
                 switchToKeyboard ("rad_zone_selected_keyboard");
             }
         }
-        // Make sure this is a valid zone key.
-        if (this.id in allZonesData) {
-            // Clear the select band from all zone buttons.
-            $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
-            // Set select band for this button.
-            $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
-            // Show which zones are on.
-            displayStates ();
-        
-            // Have we already loaded this zone? We know if a zone is loaded because
-            // it will have a field of "zone" in it.
-            if ("zone" in allZonesData [this.id]) {
-                // Use the existing data.
-                zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
-                displayMode ();
-                displayStatus ();
-            } else {
-                // Tell server which zone is required. When it responds the data
-                // will be displayed.
-                socket.send (JSON.stringify({"command":"zone_data_request", "payload":{"zone":this.id}}));
-            }
+        // Clear the select band from all zone buttons.
+        $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
+        // Set select band for this button.
+        $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
+        // Show which zones are on.
+        displayStates ();
+    
+        // Have we already loaded this zone? We know if a zone is loaded because
+        // it will have a field of "zone" in it.
+        if ("zone" in allZonesData [this.id]) {
+            // Use the existing data.
+            zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
+            displayMode ();
+            displayStatus ();
+        } else {
+            // Tell server which zone is required. When it responds the data
+            // will be displayed.
+            socket.send (JSON.stringify({"command":"zone_data_request", "payload":{"zone":this.id}}));
         }
     });
         
@@ -271,11 +269,11 @@ $(document).ready(function (){
                     ||
                     (previousKeyboard == "ufh_zone_selected_keyboard")) {
                     $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
-                    displayStates ();
                     // Do a zone check this will cause the server to send the zone
                     // data to us which will then be re-displayed.
                     socket.send (JSON.stringify ({"command":"zone_check", "payload":zoneData}));
                 }
+                displayStates ();
                 break;
         }
     });

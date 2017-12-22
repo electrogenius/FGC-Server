@@ -83,6 +83,10 @@ html *{
 .btn_zone {
     border-color:wheat;
 }
+/* Define our blank rad zone key style.*/
+.btn_zone_blank {
+    border-color:grey;
+}
 /* Define our ufh mode indicator style. */
 .btn-ufh-mode {
     border-color:wheat;
