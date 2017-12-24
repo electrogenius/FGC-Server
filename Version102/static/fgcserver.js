@@ -34,13 +34,23 @@ $(document).ready(function (){
         // Convert received json message to object and run the command.
         var messageData = JSON.parse(msg);
         switch (messageData.command) {
-            case "zone_reply":
+            case "zone_check_reply":
+            case "zone_data_reply":
                 // The server has replied to a request for data for a zone.
-                // Save the original data. Use a deep copy to copy actual data
-                // and not just the reference as we may modify zoneData.
+                // Keep a copy in our current zone data and also in all our
+                // zone data. We keep in the latter so we do not have to
+                // reload the data if we return to the zone. We use json parse
+                // each time so that we have a deep copy and not just a reference.
                 zoneData = JSON.parse(msg).payload;
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData)); 
-                console.log ("STATUS",allZonesData);
+                allZonesData [zoneData.zone] = JSON.parse(msg).payload;
+                // If this is a data reply we will save the zone state so that if
+                // an action changes the state we can indicate this to the user
+                // by comparing the new state with the last state.
+                if (messageData.command == "zone_data_reply") {
+                    zoneData.last_zone_state = zoneData.zone_state;
+                    allZonesData [zoneData.zone].last_zone_state = zoneData.zone_state;
+                }
+                console.log ("STATUS",allZonesData[zoneData.zone]);
                 displayMode ();
                 displayStatus ();
                 displayStates ();
@@ -116,10 +126,12 @@ $(document).ready(function (){
         switch (this.id) {
             case "control_rads":
                 switchToKeyboard ("rad_select_keyboard");
+                displayStates ();
                 break;
                 
             case "control_ufh":
                 switchToKeyboard ("ufh_select_keyboard");
+                displayStates ();
                 break;
                 
             case "control_set_timer":
@@ -185,17 +197,21 @@ $(document).ready(function (){
                         zoneData.boost_off_time = getTime (1, zoneData.next_off_time);
                     } else {
                         zoneData.boost_off_time = getTime (1, "current");
+                        zoneData.zone_state = "on";
                     }
                 } else {
                     // Add boost to current time as we are in manual or suspended mode.
                     zoneData.boost_off_time = getTime (1, "current");
                     // Flag we are now in boost mode.
                     zoneData.mode = "boost_" + zoneData.mode;
+                    zoneData.zone_state = "on";
                 }
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayStatus ();
+                displayStates ();
+                console.log ("BOOST", allZonesData);
                 // Change boost key to 2 hours so user can press boost key
                 // twice to get 2 hours. This must be after displayStatus() as
                 // displayStatus() sets the boost key to boost off. 
@@ -271,7 +287,7 @@ $(document).ready(function (){
                     $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
                     // Do a zone check this will cause the server to send the zone
                     // data to us which will then be re-displayed.
-                    socket.send (JSON.stringify ({"command":"zone_check", "payload":zoneData}));
+                    socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
                 }
                 displayStates ();
                 break;
@@ -1128,19 +1144,29 @@ $(document).ready(function (){
     * 
     * Globals modified: None.
     * 
-    * Comments: Sets the background of any zone keys that are on to green.
+    * Comments: Sets the background of any zone keys that are on to green. If a zone
+    * is going to change state we flash green for off to on and red for on to off.
     * 
     ********************************************************************************/
 
     function displayStates () {
+        // Check each zone.
         for (var zone in allZonesData) {
+            // Get key object for a zone.
             var key = $("#current_keyboard #" + zone);
-            if (key.length && (allZonesData [zone]["zone_state"] == "on")) {
-                key.addClass("btn_solid_green");
+            // Make sure the zone is present. If we're on rads keyboard there will be
+            // no ufh zones and vice versa.
+            if (key.length) {
+                var currentState = allZonesData [zone]["zone_state"];
+                var lastState = allZonesData [zone]["last_zone_state"];
+                // If zone was and still is on set green.
+                if ((currentState == "on") && (lastState == "on")) {
+                    key.addClass("btn_solid_green");
+                } else if ((currentState == "on") && (lastState == "off")) {
+                    key.addClass("btn_flash_green");
+                }
             }
         }
-        
-
     }
 
 

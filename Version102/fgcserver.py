@@ -26,7 +26,7 @@ basicZoneData = {
     "name":"",
     "mode":"man",
     "zone_state":"off",
-    "new_zone_state":"off",
+    "last_zone_state":"off",
     "next_on_time":0,
     "next_off_time":0,
     "boost_off_time":0,
@@ -300,7 +300,8 @@ def sendZoneStates ():
     zoneStates = {}
     # Scan through each zone and save the state (on or off).
     for zoneNumber in allZonesData :
-        zoneStates [zoneNumber] = {"zone_state":allZonesData [zoneNumber]["zone_state"]}
+        zoneStates [zoneNumber] = {"zone_state":allZonesData [zoneNumber]["zone_state"],
+                                   "last_zone_state":allZonesData [zoneNumber]["zone_state"]}
 
     # Now send to client.
     send (json.dumps ({"command":"zone_states", "payload":zoneStates}))
@@ -332,7 +333,7 @@ def checkZonesThread ():
             # Now check for timed zones.
             for zoneNumber in allZonesData :
                 # Note allZonesData passed by reference so it is modified by
-                # checkTimedZone.
+                # checkTimedZone function.
                 checkTimedZone (allZonesData [zoneNumber])
 
 
@@ -405,7 +406,7 @@ def handleMessage(msg):
         sendConsoleMessage (msg)
         if (msg ["command"] == "zone_data_request") :
             zone = msg ["payload"]["zone"]
-            send (json.dumps ({"command":"zone_reply", "payload":allZonesData [zone]}))
+            send (json.dumps ({"command":"zone_data_reply", "payload":allZonesData [zone]}))
     
         elif (msg ["command"] == "zone_update") :
             zone = msg ["payload"]["zone"] 
@@ -416,9 +417,9 @@ def handleMessage(msg):
             zoneFile.write (json.dumps (allZonesData [zone]))     
             zoneFile.close ()
 
-        elif (msg ["command"] == "zone_check") :
+        elif (msg ["command"] == "zone_data_check") :
             checkTimedZone (msg ["payload"])
-            send (json.dumps ({"command":"zone_reply", "payload":msg ["payload"]}))
+            send (json.dumps ({"command":"zone_check_reply", "payload":msg ["payload"]}))
         
         elif (msg ["command"] == "zone_state_request") :
             sendZoneStates ()

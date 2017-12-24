@@ -1,1 +1,1 @@
-{"new_zone_state": "off", "name": "Ufh Sitting X", "zone": "zone30", "timer_entries": 0, "update": "completed", "zone_state": "off", "debug_text": "", "timers": [{}], "next_off_time": 0, "boost_off_time": 0, "timer_active": 0, "mode": "man", "next_on_time": 0, "timer_selected": 0}
+{"name": "Ufh Sitting X", "zone": "zone30", "last_zone_state": "off", "timer_entries": 0, "update": "completed", "zone_state": "off", "debug_text": "", "timers": [{}], "next_off_time": 0, "boost_off_time": 0, "timer_active": 0, "mode": "man", "next_on_time": 0, "timer_selected": 0}
