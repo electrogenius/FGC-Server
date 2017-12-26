@@ -50,7 +50,7 @@ $(document).ready(function (){
                     zoneData.last_zone_state = zoneData.zone_state;
                     allZonesData [zoneData.zone].last_zone_state = zoneData.zone_state;
                 }
-                console.log ("STATUS",allZonesData[zoneData.zone]);
+                //console.log ("STATUS",allZonesData[zoneData.zone]);
                 displayMode ();
                 displayStatus ();
                 displayStates ();
@@ -62,7 +62,7 @@ $(document).ready(function (){
 
                 case "zone_states":
                 allZonesData = JSON.parse(msg).payload;
-                console.log ("STATES", allZonesData);
+                //console.log ("STATES", allZonesData);
                 displayStates ();
 
                 break;
@@ -95,7 +95,7 @@ $(document).ready(function (){
                 switchToKeyboard ("rad_zone_selected_keyboard");
             } else {
                 // We are selecting ufh zones.
-                switchToKeyboard ("rad_zone_selected_keyboard");
+                switchToKeyboard ("ufh_zone_selected_keyboard");
             }
         }
         // Clear the select band from all zone buttons.
@@ -171,11 +171,13 @@ $(document).ready(function (){
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayStatus ();
+                displayStates ();
                 // Change resume key to suspend key.
                 replaceKey ("key15", "suspend_key");
                 break;
                 
             case "control_suspend":
+                // Suspend key can only be present in timer mode.
                 // Set zone to suspended and off.
                 zoneData.mode = "suspended";
                 zoneData.zone_state = "off";
@@ -183,6 +185,7 @@ $(document).ready(function (){
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayStatus ();
+                displayStates ();
                 // Change suspend key to resume key.
                 replaceKey ("key15", "resume_key");
                 break;
@@ -197,21 +200,20 @@ $(document).ready(function (){
                         zoneData.boost_off_time = getTime (1, zoneData.next_off_time);
                     } else {
                         zoneData.boost_off_time = getTime (1, "current");
-                        zoneData.zone_state = "on";
                     }
                 } else {
                     // Add boost to current time as we are in manual or suspended mode.
                     zoneData.boost_off_time = getTime (1, "current");
                     // Flag we are now in boost mode.
                     zoneData.mode = "boost_" + zoneData.mode;
-                    zoneData.zone_state = "on";
                 }
-                // Flag we have made a change and re-display current status.
+                // Flag we have turned zone on and re-display current status.
+                zoneData.zone_state = "on";
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayStatus ();
                 displayStates ();
-                console.log ("BOOST", allZonesData);
+                //console.log ("BOOST", allZonesData);
                 // Change boost key to 2 hours so user can press boost key
                 // twice to get 2 hours. This must be after displayStatus() as
                 // displayStatus() sets the boost key to boost off. 
@@ -226,6 +228,7 @@ $(document).ready(function (){
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayStatus ();
+                displayStates ();
                 // We do not need to set boost key here as displayStatus will
                 // set it to boost off.
                 break;
@@ -234,11 +237,15 @@ $(document).ready(function (){
                 // Put mode back to how it was before boost by removing "boost_" from
                 // the mode string.
                 zoneData.mode = zoneData.mode.slice(6);
-                // Flag we have made a change and re-display current status.
+                // Flag we have made a change and update zone info.
+                zoneData.zone_state = "off";
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayStatus ();
-                // We do not need to set boost key here as displayStatus will
+                // We may have boosted a timer so we need to check if it is still active.
+                // We will do a zone check this will cause the server to send the zone
+                // data to us which will then be re-displayed in the callback.
+                socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
+                // Note: We do not need to set boost key here as displayStatus will
                 // set it to boost 1 hour.
                 break;
                 
@@ -259,7 +266,7 @@ $(document).ready(function (){
             case "control_next":
                 controlPreviousOrNext (this.id);
                 break;
-//b2
+
             case "control_finished":
                 updateServer ();
             case "control_back":
@@ -286,7 +293,7 @@ $(document).ready(function (){
                     (previousKeyboard == "ufh_zone_selected_keyboard")) {
                     $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
                     // Do a zone check this will cause the server to send the zone
-                    // data to us which will then be re-displayed.
+                    // data to us which will then be re-displayed in the callback.
                     socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
                 }
                 displayStates ();
@@ -1159,11 +1166,17 @@ $(document).ready(function (){
             if (key.length) {
                 var currentState = allZonesData [zone]["zone_state"];
                 var lastState = allZonesData [zone]["last_zone_state"];
+                // Take key back to basic style.
+                key.removeClass("btn_solid_green");
+                key.removeClass("btn_flash_green");
+                key.removeClass("btn_flash_red");
                 // If zone was and still is on set green.
                 if ((currentState == "on") && (lastState == "on")) {
                     key.addClass("btn_solid_green");
                 } else if ((currentState == "on") && (lastState == "off")) {
                     key.addClass("btn_flash_green");
+                } else if ((currentState == "off") && (lastState == "on")) {
+                    key.addClass("btn_flash_red");
                 }
             }
         }
