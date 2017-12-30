@@ -30,7 +30,7 @@ html *{
     opacity:1;
 }
 /* Define our program/man 'confirm' and 'cancel' key style. */
-.btn_confirm_cancel_program_man {
+.btn_confirm_cancel_enable_disable {
     border-color:red;
     opacity:1;
 }

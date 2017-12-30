@@ -52,7 +52,7 @@ $(document).ready(function (){
                 }
                 //console.log ("STATUS",allZonesData[zoneData.zone]);
                 displayMode ();
-                displayStatus ();
+                displayZoneStatus ();
                 displayStates ();
                 break;
             
@@ -86,6 +86,7 @@ $(document).ready(function (){
         
     // Is this a zone key?
     $("#keyboards").on('click', '.btn_zone', function (event) {
+        // The 1st zone key we get we switch to the rad or ufh zone selected keyboard.
         // Test key5 it will be 'control_set_timer' if we have already done this.
         if (($("#key5:first .btn-basic").attr("id")) != "control_set_timer") {
             
@@ -102,7 +103,7 @@ $(document).ready(function (){
         $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
         // Set select band for this button.
         $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
-        // Show which zones are on.
+        // Show which zones are on with green background.
         displayStates ();
     
         // Have we already loaded this zone? We know if a zone is loaded because
@@ -111,7 +112,7 @@ $(document).ready(function (){
             // Use the existing data.
             zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
             displayMode ();
-            displayStatus ();
+            displayZoneStatus ();
         } else {
             // Tell server which zone is required. When it responds the data
             // will be displayed.
@@ -138,8 +139,9 @@ $(document).ready(function (){
                 switchToKeyboard ("timer_set_keyboard");
                 // As this is a new zone we reset the selected index.
                 zoneData.timer_selected = 1;
+                updateEnableDisableKeys ();
                 // Display 1st entry.
-                displayProgramEntry (1);
+                displayProgramEntry ();
                 break;
                 
             case "control_on_at":
@@ -158,8 +160,9 @@ $(document).ready(function (){
                 controlDelete ();
                 break;
                 
-            case "control_program_man":
-                controlProgramMan ();
+            case "control_enable":
+            case "control_disable":
+                controlEnableDisable ();
                 break;
                 
             case "control_resume":
@@ -170,7 +173,7 @@ $(document).ready(function (){
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayStatus ();
+                displayZoneStatus ();
                 displayStates ();
                 // Change resume key to suspend key.
                 replaceKey ("key15", "suspend_key");
@@ -184,7 +187,7 @@ $(document).ready(function (){
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayStatus ();
+                displayZoneStatus ();
                 displayStates ();
                 // Change suspend key to resume key.
                 replaceKey ("key15", "resume_key");
@@ -211,12 +214,12 @@ $(document).ready(function (){
                 zoneData.zone_state = "on";
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayStatus ();
+                displayZoneStatus ();
                 displayStates ();
                 //console.log ("BOOST", allZonesData);
                 // Change boost key to 2 hours so user can press boost key
-                // twice to get 2 hours. This must be after displayStatus() as
-                // displayStatus() sets the boost key to boost off. 
+                // twice to get 2 hours. This must be after displayZoneStatus() as
+                // displayZoneStatus() sets the boost key to boost off. 
                 replaceKey ("key10", "boost_2_hours_key");
                 break;
                 
@@ -227,9 +230,9 @@ $(document).ready(function (){
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayStatus ();
+                displayZoneStatus ();
                 displayStates ();
-                // We do not need to set boost key here as displayStatus will
+                // We do not need to set boost key here as displayZoneStatus will
                 // set it to boost off.
                 break;
                 
@@ -245,16 +248,18 @@ $(document).ready(function (){
                 // We will do a zone check this will cause the server to send the zone
                 // data to us which will then be re-displayed in the callback.
                 socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
-                // Note: We do not need to set boost key here as displayStatus will
+                // Note: We do not need to set boost key here as displayZoneStatus will
                 // set it to boost 1 hour.
                 break;
                 
             case "control_new":
                 // Create and display  a new entry at the end of current entries.
-                zoneData.timers.push ({"on_at":"00:00", "off_at":"00:00", "days": "_______"});
+                zoneData.timers.push ({"on_at":"00:00", "off_at":"00:00",
+                                       "days": "_______", "enabled":false});
                 zoneData.timer_entries += 1;
                 zoneData.timer_selected = zoneData.timer_entries;
-                displayProgramEntry (zoneData.timer_selected);
+                updateEnableDisableKeys ();
+                displayProgramEntry ();
                 // Add the 'on at', 'off at', 'days' and 'delete' keys.
                 replaceKey ("key4", "on_at_key");
                 replaceKey ("key9", "off_at_key");
@@ -346,13 +351,13 @@ $(document).ready(function (){
                 lastKeyboard.pop();
                 switchToKeyboard (lastKeyboard.pop());
                 // Display what is now the selected entry.
-                displayProgramEntry (zoneData.timer_selected);
+                displayProgramEntry ();
                 break;
         }
     });
  
-    // Is this a 'confirm' or 'cancel' key for an program/manual operation?
-    $("#keyboards").on('click', '.btn_confirm_cancel_program_man', function (event) {
+    // Is this a 'confirm' or 'cancel' key for a timer enable disable operation?
+    $("#keyboards").on('click', '.btn_confirm_cancel_enable_disable', function (event) {
         $(this).addClass('btn-digit-clicked');
         switch (this.id) {
             case "control_confirm":
@@ -364,7 +369,7 @@ $(document).ready(function (){
                 // Swap mode.
                 zoneData.mode = (zoneData.mode == "timer") ? "man" : "timer";
                 displayMode();
-                displayStatus();
+                displayZoneStatus();
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
@@ -374,7 +379,7 @@ $(document).ready(function (){
                 lastKeyboard.pop();
                 switchToKeyboard (lastKeyboard.pop());
                 // Display what is now the selected entry.
-                displayProgramEntry (zoneData.timer_selected);
+                displayProgramEntry ();
                 // Clear the message now we're done.
                 $("#bottom_line_left").text ("");
                 break;
@@ -411,6 +416,31 @@ $(document).ready(function (){
         }
     }
     
+    /******************************************************************************* 
+    * Function: updateEnableDisableKeys ()
+    * 
+    * Parameters:
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments:
+    * 
+    ********************************************************************************/
+    
+    function updateEnableDisableKeys () {
+        // Only set key if we have timers.
+        if (zoneData.timer_entries) {
+            // Set enable if we are not enabled and vice versa.
+            if (zoneData.timers [zoneData.timer_selected].enabled) {
+                replaceKey ("key16", "disable_key");
+            } else {
+                replaceKey ("key16", "enable_key");
+            }
+        }
+    }
+        
     /******************************************************************************* 
     * Function: updatePreviousNextKeys ()
     * 
@@ -492,29 +522,25 @@ $(document).ready(function (){
                 saveProgramEntry (selectedEntry);
                 // Tell user if it is valid and if it is set modified flag so we
                 // send data to server when we are finished.
-                if (checkIfValidTimes (selectedEntry) == true) {
-                    // Flag we have made a change and re-display current status.
+                if (checkIfValidTimes () == true) {
+                    // Flag we have made a change and save it.
                     zoneData.update = "pending";
                     allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 }
-
-                // Fall through to clean up the same as 'back'
+                // Fall through to cleanup.
             case "control_cancel":
                 // Move back to last keyboard (program selection).
                 lastKeyboard.pop();
                 switchToKeyboard (lastKeyboard.pop());
+                updateEnableDisableKeys ();
                 // Clear any highlighted fields.
                 dataFieldOperation ("unHighlightOnAtDigits");
                 dataFieldOperation ("unHighlightOffAtDigits");
                 dataFieldOperation ("unHighlightDays");
                 // Re-display the current program.
-                displayProgramEntry (selectedEntry);
-                // Clear any warning messages if it was the 'back' key as any
-                // change will be discarded.
-                if (keyId == "control_back") {
-                    $("#bottom_line_left").text ("");
-                }
+                displayProgramEntry ();
                 break;
+
             default:
                 // Must be a digit or day key so process as required.
                 if (field == "inputDaysDay") {
@@ -817,7 +843,7 @@ $(document).ready(function (){
     
    
     /******************************************************************************* 
-    * Function: controlProgramMan ()
+    * Function: controlEnableDisable ()
     * 
     * Parameters:
     * 
@@ -829,7 +855,7 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlProgramMan () {
+    function controlEnableDisable () {
         
         // Use time entry keyboard as base keyboard.
         switchToKeyboard ("time_entry_keyboard");
@@ -838,12 +864,12 @@ $(document).ready(function (){
         replaceKey ("key19", "confirm_key");
         replaceKey ("key20", "cancel_key");
 
-        // Highlight 'confirm' and 'cancel' keys, use program/man class.
-        $("#control_confirm").toggleClass("btn-select btn_confirm_cancel_program_man");
-        $("#control_cancel").toggleClass("btn-select btn_confirm_cancel_program_man");
+        // Highlight 'confirm' and 'cancel' keys, use enable disable class.
+        $("#control_confirm").toggleClass("btn-select btn_confirm_cancel_enable_disable");
+        $("#control_cancel").toggleClass("btn-select btn_confirm_cancel_enable_disable");
         
-        // Reverse timer / manual mode.
-        var newState = (zoneData.mode == "timer") ? "Manual mode" : "Timer Mode";
+        // Set message for action that will be taken on confirm.
+        var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
 
         // Display message.
         $("#bottom_line_left").text ("Set " + zoneData.name +
@@ -1008,7 +1034,7 @@ $(document).ready(function (){
         zoneData.timer_selected = selectedEntry;       
 
         // Show entry.
-        displayProgramEntry (selectedEntry);
+        displayProgramEntry ();
     }
     
     /******************************************************************************* 
@@ -1032,9 +1058,9 @@ $(document).ready(function (){
     }
     
     /******************************************************************************* 
-    * Function: displayProgramEntry (selectedEntry)
+    * Function: displayProgramEntry ()
     * 
-    * Parameters:
+    * Parameters: 
     * 
     * Returns:
     * 
@@ -1044,7 +1070,7 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function  displayProgramEntry (selectedEntry) {
+    function  displayProgramEntry () {
         
         // Clear the middle display line.
         $("#display_entries").text ("");
@@ -1059,6 +1085,9 @@ $(document).ready(function (){
             replaceKey ("key14", "blank_key");
             replaceKey ("key18", "blank_key");
         } else {
+            // Get the timer number are we working on.
+            var selectedEntry = zoneData.timer_selected;
+            // Now populate middle display line to show on time, off time  and days.
             $("#middle_line_program #turn_on_text").text ("Turn on at" + "\xa0");
             dataFieldOperation ("updateOnAtDigits", zoneData.timers [selectedEntry].on_at);
             $("#middle_line_program #turn_off_text").text ("\xa0" + "Turn off at" + "\xa0");
@@ -1067,7 +1096,7 @@ $(document).ready(function (){
             dataFieldOperation ("updateDaysDay", zoneData.timers [selectedEntry].days);
             
             // Tell user if it is valid.
-            checkIfValidTimes (selectedEntry);
+            checkIfValidTimes ();
             
             // Display number of program entries on the right of the middle line.
             $("#display_entries").text ("(Timer " +
@@ -1082,7 +1111,7 @@ $(document).ready(function (){
     
 
     /******************************************************************************* 
-    * Function: checkIfValidTimes (selectedEntry)
+    * Function: checkIfValidTimes ()
     * 
     * Parameters:
     * 
@@ -1094,16 +1123,22 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function checkIfValidTimes (selectedEntry) {
+    function checkIfValidTimes () {
         
+        // Get the timer number are we working on.
+        var selectedEntry = zoneData.timer_selected;
         // Get the times for the currently selected timer.
         var onTime = zoneData.timers [selectedEntry].on_at;
         var offTime = zoneData.timers [selectedEntry].off_at;
         var days = zoneData.timers [selectedEntry].days;
         
         // If the on time = off time or there are no days warn user and exit false.
-        if ((onTime == offTime) || (days == "_______")) {
+        if (onTime == offTime) {
             $("#bottom_line_left").text ("Warning: no on period.");
+            return (false);
+        }
+        if (days == "_______") {
+            $("#bottom_line_left").text ("Warning: no days set.");
             return (false);
         }
         // Get here if we have a valid time so clear any warning message.
@@ -1208,7 +1243,7 @@ $(document).ready(function (){
     
     
     /******************************************************************************* 
-    * Function: displayStatus ()
+    * Function: displayZoneStatus ()
     * 
     * Parameters: None.
     * 
@@ -1220,7 +1255,7 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
     
-    function displayStatus () {
+    function displayZoneStatus () {
         // Lookup for on/off part of status display.
         var statusMessage = {"on": "On",
                              "off":"Off",

@@ -12,7 +12,7 @@ import time
 # "zone" - "zone0" to "zone30" - The hardware zone number.
 # "update" - "completed", "pending", "sent".
 # "name" - the name of the room as defined in zoneNames.
-# "mode" - "man", "timer", "boost_man", "boost_man", "suspended"
+# "mode" - "man", "timer", "boost_man", "boost_timer", "suspended"
 # "boost"- "none" or the boost end time as "HH:MM DDD".
 # "zone_state" - "unknown", "on", "off".
 # "next_off_time" - UTC - the time the current on or off will end.
