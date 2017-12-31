@@ -435,7 +435,7 @@ if __name__ == "__main__":
     # When we have all the zone data start task to check for zone operation.
     socketio.start_background_task (target = checkZonesThread)     
     #app.run(host='0.0.0.0', port=80, debug=True) 
-    socketio.run(app, host='0.0.0.0', port=80, debug=True)
+    socketio.run(app, host='0.0.0.0', port=80, debug=False)
    
    
    

@@ -51,7 +51,7 @@ $(document).ready(function (){
                     allZonesData [zoneData.zone].last_zone_state = zoneData.zone_state;
                 }
                 //console.log ("STATUS",allZonesData[zoneData.zone]);
-                displayMode ();
+                displayZoneTimerInfo ();
                 displayZoneStatus ();
                 displayStates ();
                 break;
@@ -111,7 +111,7 @@ $(document).ready(function (){
         if ("zone" in allZonesData [this.id]) {
             // Use the existing data.
             zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
-            displayMode ();
+            displayZoneTimerInfo ();
             displayZoneStatus ();
         } else {
             // Tell server which zone is required. When it responds the data
@@ -139,7 +139,6 @@ $(document).ready(function (){
                 switchToKeyboard ("timer_set_keyboard");
                 // As this is a new zone we reset the selected index.
                 zoneData.timer_selected = 1;
-                updateEnableDisableKeys ();
                 // Display 1st entry.
                 displayProgramEntry ();
                 break;
@@ -162,7 +161,7 @@ $(document).ready(function (){
                 
             case "control_enable":
             case "control_disable":
-                controlEnableDisable ();
+            controlEnableOrDisable ();
                 break;
                 
             case "control_resume":
@@ -258,7 +257,6 @@ $(document).ready(function (){
                                        "days": "_______", "enabled":false});
                 zoneData.timer_entries += 1;
                 zoneData.timer_selected = zoneData.timer_entries;
-                updateEnableDisableKeys ();
                 displayProgramEntry ();
                 // Add the 'on at', 'off at', 'days' and 'delete' keys.
                 replaceKey ("key4", "on_at_key");
@@ -366,9 +364,10 @@ $(document).ready(function (){
                     // Remove "boost_" from mode string.
                     zoneData.mode = zoneData.mode.slice(6);
                 }
-                // Swap mode.
-                zoneData.mode = (zoneData.mode == "timer") ? "man" : "timer";
-                displayMode();
+                // Get current state and swap it.
+                var state = zoneData.timers [zoneData.timer_selected].enabled;               
+                zoneData.timers [zoneData.timer_selected].enabled = !state;
+                displayZoneTimerInfo();
                 displayZoneStatus();
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
@@ -532,7 +531,6 @@ $(document).ready(function (){
                 // Move back to last keyboard (program selection).
                 lastKeyboard.pop();
                 switchToKeyboard (lastKeyboard.pop());
-                updateEnableDisableKeys ();
                 // Clear any highlighted fields.
                 dataFieldOperation ("unHighlightOnAtDigits");
                 dataFieldOperation ("unHighlightOffAtDigits");
@@ -843,7 +841,7 @@ $(document).ready(function (){
     
    
     /******************************************************************************* 
-    * Function: controlEnableDisable ()
+    * Function: controlEnableOrDisable ()
     * 
     * Parameters:
     * 
@@ -855,7 +853,7 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlEnableDisable () {
+    function controlEnableOrDisable () {
         
         // Use time entry keyboard as base keyboard.
         switchToKeyboard ("time_entry_keyboard");
@@ -1107,6 +1105,8 @@ $(document).ready(function (){
         }
         // Display previous and next keys as required.
         updatePreviousNextKeys ();
+        // Update enable or disable key now we are on new timer.
+        updateEnableDisableKeys ();
     }
     
 
@@ -1219,7 +1219,7 @@ $(document).ready(function (){
 
 
     /******************************************************************************* 
-    * Function: displayMode ()
+    * Function: displayZoneTimerInfo ()
     * 
     * Parameters: None.
     * 
@@ -1227,18 +1227,35 @@ $(document).ready(function (){
     * 
     * Globals modified: None.
     * 
-    * Comments: Displays the current mode of the selected zone
+    * Comments: Displays the general timer info of the selected zone.
     * 
     ********************************************************************************/
 
-    function displayMode () {
-        // Lookup for mode message in top left of display.
-        var modeMessage = {"timer":" in Timer mode", "man":" in Manual mode",
-                           "boost_timer":" in Timer mode", "boost_man":" in Manual mode",
-                           "suspended":" in Timer mode"
-        };
-        // Create and display mode message at top left of display.
-        $("#display_top1").text (zoneData.name + modeMessage[zoneData.mode]);
+    function displayZoneTimerInfo () {
+        var numberOfTimers = zoneData.timer_entries;
+        // Start the message.
+        var infoMessage = zoneData.name + " has ";
+        // Add number of timers.
+        if (numberOfTimers) {
+            infoMessage += numberOfTimers; 
+        } else {
+            infoMessage += "no";
+        }
+        infoMessage += " timer";
+        // Do we need a plural s?
+        if (numberOfTimers != 1) {
+            infoMessage += "s";
+        }
+        // If we have timers add which are enabled.
+        if (numberOfTimers) {
+            for (timerNumber = 1; timerNumber <= numberOfTimers; timerNumber++){
+                if (zoneData.timers [timerNumber].enabled) {
+                    infoMessage += timerNumber;
+                }
+            }
+        }
+        // Display message at top left of display.
+        $("#display_top1").text (infoMessage);
     }
     
     
