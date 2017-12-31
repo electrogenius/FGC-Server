@@ -1233,7 +1233,7 @@ $(document).ready(function (){
 
     function displayZoneTimerInfo () {
         var numberOfTimers = zoneData.timer_entries;
-        // Start the message.
+        // Start the message with zone name.
         var infoMessage = zoneData.name + " has ";
         // Add number of timers.
         if (numberOfTimers) {
@@ -1242,16 +1242,47 @@ $(document).ready(function (){
             infoMessage += "no";
         }
         infoMessage += " timer";
-        // Do we need a plural s?
+        // If there is more than 1 timer we need a plural s?
         if (numberOfTimers != 1) {
             infoMessage += "s";
         }
-        // If we have timers add which are enabled.
+        // If we have timers create list of enabled timers.
         if (numberOfTimers) {
-            for (timerNumber = 1; timerNumber <= numberOfTimers; timerNumber++){
+            var timerList = [];
+            for (var timerNumber = 1; timerNumber <= numberOfTimers; timerNumber++){
                 if (zoneData.timers [timerNumber].enabled) {
-                    infoMessage += timerNumber;
+                    timerList.push (timerNumber);
                 }
+            }
+            // How many enabled?
+            var timersEnabled = timerList.length;
+            // Are any enabled?
+            if (timersEnabled) {
+                // Are they all enabled?
+                if (timersEnabled == numberOfTimers) {
+                    infoMessage += " - all enabled";
+                } else {
+                    // Only some enabled.
+                    infoMessage += " - timer";
+                    // If there is more than 1 enabled we need a plural s?
+                    if (timersEnabled != 1) {
+                        infoMessage += "s";
+                    }
+                    // Add each one to message, use comma or and as needed.
+                    for (var i = 1; i <= timersEnabled; i++) {
+                        infoMessage += (" " + timerList.shift ());
+                        if (timerList.length > 1) {
+                            infoMessage += ", ";
+                        } else if (timerList.length == 1) {
+                            infoMessage += " and ";
+                        }
+                    }
+                    // Finish message.
+                    infoMessage += " enabled";
+                }
+            } else {
+                // No timers enabled.
+                infoMessage += " - none enabled";
             }
         }
         // Display message at top left of display.
