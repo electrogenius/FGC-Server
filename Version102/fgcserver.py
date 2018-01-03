@@ -12,8 +12,7 @@ import time
 # "zone" - "zone0" to "zone30" - The hardware zone number.
 # "update" - "completed", "pending", "sent".
 # "name" - the name of the room as defined in zoneNames.
-# "mode" - "man", "timer", "boost_man", "boost_timer", "suspended"
-# "boost"- "none" or the boost end time as "HH:MM DDD".
+# "mode" - "timer", "boost_timer", "suspended"
 # "zone_state" - "unknown", "on", "off".
 # "next_off_time" - UTC - the time the current on or off will end.
 # "next_on_time" - UTC - the next off or on time.
@@ -24,7 +23,7 @@ basicZoneData = {
     "update": "completed",
     "debug_text":"",
     "name":"",
-    "mode":"man",
+    "mode":"timer",
     "zone_state":"off",
     "last_zone_state":"off",
     "next_on_time":0,
@@ -105,7 +104,7 @@ def checkTimedZone (zoneData):
     timerData = deepcopy (zoneData ["timers"])
     
     # Is timer mode active and are there any timers for this zone?
-    # mode may be "suspended" which can only occur if we were on and in
+    # Note: mode may be "suspended" which can only occur if we were on and in
     # "timer" mode.
     if mode in ("timer", "suspended") and numberOfTimers > 0:
 
@@ -116,10 +115,13 @@ def checkTimedZone (zoneData):
         # Make a list of all the timers.
         allTimersList = list (range (1, numberOfTimers + 1))
         
-        # Check each timer and if it is valid for today save it in a list.
+        # Check each timer and if it is valid for today and enabled
+        # save it in a list.
         todayTimersList = []
         for timer in allTimersList :
-            if  timerData [timer]["days"][localTime.tm_wday] != "_" :
+            if  (timerData [timer]["days"][localTime.tm_wday] != "_"
+                 and
+                 timerData [timer]["enabled"]) :
                 todayTimersList.append (timer)
         
         # Are any timers valid for today?

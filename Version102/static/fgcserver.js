@@ -50,10 +50,10 @@ $(document).ready(function (){
                     zoneData.last_zone_state = zoneData.zone_state;
                     allZonesData [zoneData.zone].last_zone_state = zoneData.zone_state;
                 }
-                //console.log ("STATUS",allZonesData[zoneData.zone]);
                 displayZoneTimerInfo ();
                 displayZoneStatus ();
                 displayStates ();
+                console.log ("ZONEDATA", zoneData);
                 break;
             
                 case "console_message":
@@ -62,7 +62,6 @@ $(document).ready(function (){
 
                 case "zone_states":
                 allZonesData = JSON.parse(msg).payload;
-                //console.log ("STATES", allZonesData);
                 displayStates ();
 
                 break;
@@ -141,6 +140,7 @@ $(document).ready(function (){
                 zoneData.timer_selected = 1;
                 // Display 1st entry.
                 displayProgramEntry ();
+                displayCurrentTimerInfo ();
                 break;
                 
             case "control_on_at":
@@ -215,7 +215,6 @@ $(document).ready(function (){
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 displayZoneStatus ();
                 displayStates ();
-                //console.log ("BOOST", allZonesData);
                 // Change boost key to 2 hours so user can press boost key
                 // twice to get 2 hours. This must be after displayZoneStatus() as
                 // displayZoneStatus() sets the boost key to boost off. 
@@ -258,6 +257,7 @@ $(document).ready(function (){
                 zoneData.timer_entries += 1;
                 zoneData.timer_selected = zoneData.timer_entries;
                 displayProgramEntry ();
+                displayCurrentTimerInfo ();
                 // Add the 'on at', 'off at', 'days' and 'delete' keys.
                 replaceKey ("key4", "on_at_key");
                 replaceKey ("key9", "off_at_key");
@@ -350,6 +350,7 @@ $(document).ready(function (){
                 switchToKeyboard (lastKeyboard.pop());
                 // Display what is now the selected entry.
                 displayProgramEntry ();
+                displayCurrentTimerInfo ();
                 break;
         }
     });
@@ -367,7 +368,7 @@ $(document).ready(function (){
                 // Get current state and swap it.
                 var state = zoneData.timers [zoneData.timer_selected].enabled;               
                 zoneData.timers [zoneData.timer_selected].enabled = !state;
-                displayZoneTimerInfo();
+                displayCurrentTimerInfo();
                 displayZoneStatus();
                 // Flag we have made a change and re-display current status.
                 zoneData.update = "pending";
@@ -402,7 +403,6 @@ $(document).ready(function (){
     function updateServer () {
         // Scan through all our zones.
         for (var zone in allZonesData) {
-            //console.log ("ZONES",zone);
             // Has it been modified?
             if (allZonesData [zone]["update"] == "pending") {
                 // Flag we sent it.
@@ -1033,6 +1033,7 @@ $(document).ready(function (){
 
         // Show entry.
         displayProgramEntry ();
+        displayCurrentTimerInfo ();
     }
     
     /******************************************************************************* 
@@ -1076,7 +1077,7 @@ $(document).ready(function (){
         
         // If there are no entries tell the user.
         if (zoneData.timer_entries == 0) {
-            $("#middle_line_program #status_text").text (zoneData.name +" has no timers - 'New' to create a timer");
+            $("#middle_line_program #status_text").text ("'New' to create a timer");
             // Remove the 'on at', 'off at', 'days' and 'delete' keys.
             replaceKey ("key4", "blank_key");
             replaceKey ("key9", "blank_key");
@@ -1219,6 +1220,32 @@ $(document).ready(function (){
 
 
     /******************************************************************************* 
+    * Function: displayCurrentTimerInfo ()
+    * 
+    * Parameters: None.
+    * 
+    * Returns: Nothing.
+    * 
+    * Globals modified: None.
+    * 
+    * Comments: Displays the timer info of the selected timer.
+    * 
+    ********************************************************************************/
+    function displayCurrentTimerInfo () {
+        var currentTimer = zoneData.timer_selected;
+        if (currentTimer) {
+            // Start the message with zone name.
+            var infoMessage = zoneData.name + " timer " + currentTimer + " - ";
+            if (!(zoneData.timers [currentTimer].enabled)) {
+                infoMessage += "not ";
+            }
+            infoMessage += "enabled";
+            // Display message at top left of display.
+            $("#display_top1").text (infoMessage);
+        }
+    }
+
+    /******************************************************************************* 
     * Function: displayZoneTimerInfo ()
     * 
     * Parameters: None.
@@ -1230,7 +1257,6 @@ $(document).ready(function (){
     * Comments: Displays the general timer info of the selected zone.
     * 
     ********************************************************************************/
-
     function displayZoneTimerInfo () {
         var numberOfTimers = zoneData.timer_entries;
         // Start the message with zone name.
@@ -1246,24 +1272,32 @@ $(document).ready(function (){
         if (numberOfTimers != 1) {
             infoMessage += "s";
         }
-        // If we have timers create list of enabled timers.
+        // Do we have timers?
         if (numberOfTimers) {
+            // We have timers so more message is required, add a dash.
+            infoMessage += " - ";
+            //  Create list of enabled timers.
             var timerList = [];
             for (var timerNumber = 1; timerNumber <= numberOfTimers; timerNumber++){
                 if (zoneData.timers [timerNumber].enabled) {
                     timerList.push (timerNumber);
                 }
             }
-            // How many enabled?
+            // Get number of enabled timers?
             var timersEnabled = timerList.length;
             // Are any enabled?
             if (timersEnabled) {
                 // Are they all enabled?
                 if (timersEnabled == numberOfTimers) {
-                    infoMessage += " - all enabled";
+                    // Adjust wording for 1,2 or all.
+                    if (numberOfTimers == 2) {
+                        infoMessage += "both ";
+                    } else if (numberOfTimers != 1) {
+                        infoMessage += "all ";
+                    }
                 } else {
                     // Only some enabled.
-                    infoMessage += " - timer";
+                    infoMessage += "timer";
                     // If there is more than 1 enabled we need a plural s?
                     if (timersEnabled != 1) {
                         infoMessage += "s";
@@ -1277,13 +1311,21 @@ $(document).ready(function (){
                             infoMessage += " and ";
                         }
                     }
-                    // Finish message.
-                    infoMessage += " enabled";
+                    // Finish message with a space before last word.
+                    infoMessage += " ";
                 }
             } else {
-                // No timers enabled.
-                infoMessage += " - none enabled";
+                // No timers enabled. Adjust wording for 1,2 or all.
+                if (numberOfTimers == 2) {
+                    infoMessage += "neither ";
+                } else if (numberOfTimers != 1) {
+                    infoMessage += "none ";
+                } else {
+                    infoMessage += "not ";
+                }
             }
+            // Last word of message.
+            infoMessage += "enabled";
         }
         // Display message at top left of display.
         $("#display_top1").text (infoMessage);
@@ -1323,8 +1365,6 @@ $(document).ready(function (){
         var boostOffTime = (new Date(zoneData.boost_off_time*1000)).toUTCString ();
         boostOffTime = boostOffTime.slice (16, 22) + " " + boostOffTime.slice (0, 3);
         
-        //console.log(offTime, onTime);
-
         // Start the status message here with the state of the zone.
         // This is the message we will use for manual mode.
         var status = "Current status: " + statusMessage[zoneData.zone_state] + " ";
@@ -1342,29 +1382,27 @@ $(document).ready(function (){
             // Not on boost so display boost 1 hour key.
             replaceKey ("key10", "boost_1_hour_key");
             // If we are in timer or suspended mode there will be times to display.
-            if ((zoneData.mode == "timer") || (zoneData.mode == "suspended")) {
-                // If there are no entries tell the user.
-                if (zoneData.timer_entries < 1) {
-                    status += (zoneData.name +" has no timers");
-                } else {
-                    // Is this an 'on' or 'suspended'?
-                    if (zoneData.zone_state == "on") {
-                        // We are 'on' so set 'suspend' key active.
-                        replaceKey ("key15", "suspend_key");
-                        // We will display the next off time.
-                        status += ("until " + offTime);
-                        
-                    } else if (zoneData.mode == "suspended") {
-                        // We are 'suspended' so set 'resume' key active.
-                        replaceKey ("key15", "resume_key");
-                        // We will display the next on time.
-                        status += ("until " + onTime);
+            if ((zoneData.timer_entries)
+                 &&
+                ((zoneData.mode == "timer") || (zoneData.mode == "suspended"))) {
+                // Is this an 'on' or 'suspended'?
+                if (zoneData.zone_state == "on") {
+                    // We are 'on' so set 'suspend' key active.
+                    replaceKey ("key15", "suspend_key");
+                    // We will display the next off time.
+                    status += ("until " + offTime);
                     
-                    } else {
-                        // We are timed off.  We will display the next on time.
-                        status += ("until " + onTime);
-                    }
+                } else if (zoneData.mode == "suspended") {
+                    // We are 'suspended' so set 'resume' key active.
+                    replaceKey ("key15", "resume_key");
+                    // We will display the next on time.
+                    status += ("until " + onTime);
+                
+                } else {
+                    // We are timed off.  We will display the next on time.
+                    status += ("until " + onTime);
                 }
+                
             }
         }
         // Clear the line and display status.
@@ -1506,7 +1544,6 @@ $(document).ready(function (){
             $("#middle_line_program > div").text("");
             $("#middle_line_program #status_text").text ("Select function.");
         }
-        //console.log (lastKeyboard);
     }
     
     /******************************************************************************* 
