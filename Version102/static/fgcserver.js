@@ -90,7 +90,7 @@ $(document).ready(function (){
         if (($("#key5:first .btn-basic").attr("id")) != "control_set_timer") {
             
             // Are we on rad or ufh select? Rad is zones 1-14.
-            if (this.id < "zone15") {
+            if (parseInt (this.id.slice (4)) < 15) {
                 // We are selecting rad zones.
                 switchToKeyboard ("rad_zone_selected_keyboard");
             } else {
@@ -433,9 +433,9 @@ $(document).ready(function (){
         if (zoneData.timer_entries) {
             // Set enable if we are not enabled and vice versa.
             if (zoneData.timers [zoneData.timer_selected].enabled) {
-                replaceKey ("key16", "disable_key");
+                replaceKey ("key19", "disable_key");
             } else {
-                replaceKey ("key16", "enable_key");
+                replaceKey ("key19", "enable_key");
             }
         }
     }
@@ -1233,9 +1233,10 @@ $(document).ready(function (){
     ********************************************************************************/
     function displayCurrentTimerInfo () {
         var currentTimer = zoneData.timer_selected;
-        if (currentTimer) {
+        console.log (currentTimer)
+        if (zoneData.timer_entries >= 1) {
             // Start the message with zone name.
-            var infoMessage = zoneData.name + " timer " + currentTimer + " - ";
+            var infoMessage = zoneData.name + " - timer " + currentTimer + " - ";
             if (!(zoneData.timers [currentTimer].enabled)) {
                 infoMessage += "not ";
             }
@@ -1383,6 +1384,8 @@ $(document).ready(function (){
             replaceKey ("key10", "boost_1_hour_key");
             // If we are in timer or suspended mode there will be times to display.
             if ((zoneData.timer_entries)
+                 &&
+                (zoneData.timers [zoneData.timer_selected].enabled)
                  &&
                 ((zoneData.mode == "timer") || (zoneData.mode == "suspended"))) {
                 // Is this an 'on' or 'suspended'?

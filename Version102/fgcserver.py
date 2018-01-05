@@ -108,20 +108,22 @@ def checkTimedZone (zoneData):
     # "timer" mode.
     if mode in ("timer", "suspended") and numberOfTimers > 0:
 
-        # Clear active timer flag as default.
+        # Clear active timer flag and next times. Set zone off.
         zoneData ["timer_active"] = 0  
-        # Set zone off as default.
+        zoneData ["next_on_time"] = 0
+        zoneData ["next_off_time"] = 0    
         zoneData ["zone_state"] = "off"
-        # Make a list of all the timers.
-        allTimersList = list (range (1, numberOfTimers + 1))
         
-        # Check each timer and if it is valid for today and enabled
-        # save it in a list.
+        # Make a list of all the timers that are enabled for this zone.
+        allTimersList = []
+        for timer in range (1, numberOfTimers + 1) :
+            if timerData [timer]["enabled"] :
+                allTimersList.append (timer)
+        
+        # Make a list of all timers valid for today.
         todayTimersList = []
         for timer in allTimersList :
-            if  (timerData [timer]["days"][localTime.tm_wday] != "_"
-                 and
-                 timerData [timer]["enabled"]) :
+            if  timerData [timer]["days"][localTime.tm_wday] != "_" :
                 todayTimersList.append (timer)
         
         # Are any timers valid for today?
@@ -205,7 +207,7 @@ def checkTimedZone (zoneData):
         # are looking for next "on at" below.
         allTimersList.sort (key=lambda timerNumber:timerData [timerNumber]['on_at'])
         todayTimersList.sort (key=lambda timerNumber:timerData [timerNumber]['on_at'])
-    
+
         # Check each timer to see if we have an "on at" later today.
         for timer in todayTimersList :
             # Get on time for this timer.
@@ -218,20 +220,20 @@ def checkTimedZone (zoneData):
                 break
         else:
             # Get here if no timer "on at" later today. We need to check
-            # through each day until we find the next "on at".
+            # through each future day until we find the next "on at".
             dayAdvance = 0
             # Get current day.
             dayOfWeek = localTime.tm_wday
 
-            while allTimersList :
+            # Try each day. Exit if we find no days.
+            while dayAdvance < 86400 * 7 :
                 # Move to next day. Wrap if we move past Sunday (6).
                 dayOfWeek = dayOfWeek + 1 if dayOfWeek < 6 else 0
                 # Each time we go forward one day we will add 86400 seconds
                 # to the UTC time.
                 dayAdvance += 86400
-
                 # Check each timer and if it is valid for the day we have
-                # the next "on at" time.
+                # found the next "on at" time.
                 for timer in allTimersList :
                     # Get on time for this timer.
                     timerOnAt = timerData [timer]["on_at"]
@@ -239,8 +241,8 @@ def checkTimedZone (zoneData):
                     if  timerData [timer]["days"][dayOfWeek] != "_" :
                         # We have a valid day so use on time.
                         zoneData ["next_on_time"] = CreateUtcEntry (localTime, timerOnAt, dayAdvance )
-                        # Clear timer list so we drop out of outer loop.
-                        allTimersList = []
+                        # Set dayAvance to max to force exit via while above.
+                        dayAdvance = 86400 * 7
                         # Got an on time so leave.   
                         break
                     
@@ -407,10 +409,12 @@ def handleMessage(msg):
         msg = json.loads (msg)
         sendConsoleMessage (msg)
         if (msg ["command"] == "zone_data_request") :
+            print ("REQUEST")
             zone = msg ["payload"]["zone"]
             send (json.dumps ({"command":"zone_data_reply", "payload":allZonesData [zone]}))
     
         elif (msg ["command"] == "zone_update") :
+            print ("UPDATE")
             zone = msg ["payload"]["zone"] 
             allZonesData [zone] = deepcopy(msg ["payload"])
             allZonesData [zone]["update"] = "completed"
@@ -420,10 +424,13 @@ def handleMessage(msg):
             zoneFile.close ()
 
         elif (msg ["command"] == "zone_data_check") :
+            print ("CHECK")
+            print (msg ["payload"])
             checkTimedZone (msg ["payload"])
             send (json.dumps ({"command":"zone_check_reply", "payload":msg ["payload"]}))
         
         elif (msg ["command"] == "zone_state_request") :
+            print ("STATE")
             sendZoneStates ()
         
  
