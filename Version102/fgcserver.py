@@ -114,10 +114,15 @@ def checkTimedZone (zoneData):
         zoneData ["next_off_time"] = 0    
         zoneData ["zone_state"] = "off"
         
-        # Make a list of all the timers that are enabled for this zone.
+        # Make a list of all the timers that are valid and enabled for this zone.
+        # Valid timers have an on time before off time and at least 1 day set.
         allTimersList = []
         for timer in range (1, numberOfTimers + 1) :
-            if timerData [timer]["enabled"] :
+            if (timerData [timer]["on_at"] < timerData [timer]["off_at"]
+                and
+                timerData [timer]["days"] != "_______"
+                and
+                timerData [timer]["enabled"]) :
                 allTimersList.append (timer)
         
         # Make a list of all timers valid for today.

@@ -97,11 +97,11 @@ html *{
 }
 /* When a zone button is clicked we turn the border orange. */
 .btn-zone-clicked,  .btn-zone-clicked:focus {
-    border-color:orange;
+    border-color:yellow;
     color:white;
 }
 .btn_solid_green {
-    background-color:green;
+    background-color:rgb(13, 85, 13);
 }       
 .btn_solid_red {
     background-color:red;

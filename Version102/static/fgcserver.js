@@ -503,29 +503,29 @@ $(document).ready(function (){
         switch (keyId) {
             case "control_confirm":
                 // If 'on at' time > 'off at' time make them the same.
-                if (onTime > offTime) {
+                //if (onTime > offTime) {
                     // We need to find out if we were programming 'on at' or 'off at' times.
                     // This is so that we adjust the correct one. Do this by checking if
                     // either has the cursor.
-                    if ($("#middle_line #on_at_digit_0").hasClass ("on_at_field_selected_cursor")) {
+                //    if ($("#middle_line #on_at_digit_0").hasClass ("on_at_field_selected_cursor")) {
                         // Make off the same as on.
-                        offTime = onTime;
-                    } else if ($("#middle_line #off_at_digit_0").hasClass ("off_at_field_selected_cursor")){
+                //        offTime = onTime;
+                //    } else if ($("#middle_line #off_at_digit_0").hasClass ("off_at_field_selected_cursor")){
                         // Make on the same as off.
-                        onTime = offTime;
-                    }
-                }
+                    //    onTime = offTime;
+                //    }
+               // }
                 // Update on and off digits in display and then save. 
-                dataFieldOperation ("updateOnAtDigits", onTime);
-                dataFieldOperation ("updateOffAtDigits", offTime);
+               // dataFieldOperation ("updateOnAtDigits", onTime);
+               // dataFieldOperation ("updateOffAtDigits", offTime);
                 saveProgramEntry (selectedEntry);
                 // Tell user if it is valid and if it is set modified flag so we
                 // send data to server when we are finished.
-                if (checkIfValidTimes () == true) {
+                //if (checkIfValidTimes () == true) {
                     // Flag we have made a change and save it.
                     zoneData.update = "pending";
                     allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                }
+                //}
                 // Fall through to cleanup.
             case "control_cancel":
                 // Move back to last keyboard (program selection).
@@ -642,7 +642,7 @@ $(document).ready(function (){
             }    
         }
         // If this is the 1st digit location clear the current entry.
-        // Remove 'save' key. We will display it when all 4 digits entered.
+        // Remove 'confirm' key. We will display it when all 4 digits entered.
         // Clear any warning message.
         if (digitIndex == 0) {
             dataFieldOperation (op.digitUpdate, "__:__");
@@ -684,15 +684,16 @@ $(document).ready(function (){
             if ($("#control_confirm").hasClass("btn-select")) {
                 $("#control_confirm").toggleClass("btn-select btn_" + op.field + "entry");
             }
+            //checkIfValidTimes ();
             // If the on time > off time warn user both times will be set the same.
-            if (dataFieldOperation ("readOnAtDigits") > dataFieldOperation ("readOffAtDigits")){
-                // Create and display warning message at bottom left of display.
-                var warningMessage = "Warning: ";
-                warningMessage += (op.field == "on_at_") ? "'off at time' " : "'on at time' ";
-                warningMessage += "will be set to ";
-                warningMessage += (op.field == "on_at_") ? "'on at time.'" : "'off at time'.";
-                $("#bottom_line_left").text (warningMessage);
-            }
+           // if (dataFieldOperation ("readOnAtDigits") > dataFieldOperation ("readOffAtDigits")){
+            //    // Create and display warning message at bottom left of display.
+            //    var warningMessage = "Warning: ";
+            //    warningMessage += (op.field == "on_at_") ? "'off at time' " : "'on at time' ";
+           //     warningMessage += "will be set to ";
+           //     warningMessage += (op.field == "on_at_") ? "'on at time.'" : "'off at time'.";
+            //    $("#bottom_line_left").text (warningMessage);
+            //}
         }
         
         // Create selector for next location.
@@ -870,7 +871,7 @@ $(document).ready(function (){
         var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
 
         // Display message.
-        $("#bottom_line_left").text ("Set " + zoneData.name +
+        $("#bottom_line_left").text ("Set Timer " + zoneData.timer_selected +
                                      " to " + newState + 
                                      "? - 'Confirm' or 'Cancel'");
     }
@@ -1133,13 +1134,9 @@ $(document).ready(function (){
         var offTime = zoneData.timers [selectedEntry].off_at;
         var days = zoneData.timers [selectedEntry].days;
         
-        // If the on time = off time or there are no days warn user and exit false.
-        if (onTime == offTime) {
-            $("#bottom_line_left").text ("Warning: no on period.");
-            return (false);
-        }
-        if (days == "_______") {
-            $("#bottom_line_left").text ("Warning: no days set.");
+        // If we have invalid times or there are no days warn user and exit false.
+        if ((onTime >= offTime) || (days == "_______")) {
+            $("#bottom_line_left").text ("Warning: invalid times or no days set.");
             return (false);
         }
         // Get here if we have a valid time so clear any warning message.
@@ -1387,7 +1384,7 @@ $(document).ready(function (){
                  &&
                 (zoneData.timers [zoneData.timer_selected].enabled)
                  &&
-                ((zoneData.mode == "timer") || (zoneData.mode == "suspended"))) {
+                (zoneData.next_on_time != zoneData.next_off_time)) {
                 // Is this an 'on' or 'suspended'?
                 if (zoneData.zone_state == "on") {
                     // We are 'on' so set 'suspend' key active.
