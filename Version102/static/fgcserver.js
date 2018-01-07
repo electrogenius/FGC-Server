@@ -87,7 +87,7 @@ $(document).ready(function (){
     $("#keyboards").on('click', '.btn_zone', function (event) {
         // The 1st zone key we get we switch to the rad or ufh zone selected keyboard.
         // Test key5 it will be 'control_set_timer' if we have already done this.
-        if (($("#key5:first .btn-basic").attr("id")) != "control_set_timer") {
+        if (($("#key5:first .btn_basic").attr("id")) != "control_set_timer") {
             
             // Are we on rad or ufh select? Rad is zones 1-14.
             if (parseInt (this.id.slice (4)) < 15) {
@@ -99,9 +99,9 @@ $(document).ready(function (){
             }
         }
         // Clear the select band from all zone buttons.
-        $("#current_keyboard .btn_zone").removeClass('btn-zone-clicked');
+        $("#current_keyboard .btn_zone").removeClass('btn_zone_clicked');
         // Set select band for this button.
-        $("#current_keyboard #" + this.id).addClass('btn-zone-clicked');
+        $("#current_keyboard #" + this.id).addClass('btn_zone_clicked');
         // Show which zones are on with green background.
         displayStates ();
     
@@ -120,8 +120,8 @@ $(document).ready(function (){
     });
         
     // Is this a control key?
-    $("#keyboards").on('click', '.btn-select', function (event) {
-        $(this).addClass('btn-select-clicked');
+    $("#keyboards").on('click', '.btn_select', function (event) {
+        $(this).addClass('btn_select_clicked');
 
         switch (this.id) {
             case "control_rads":
@@ -138,7 +138,7 @@ $(document).ready(function (){
                 switchToKeyboard ("timer_set_keyboard");
                 // As this is a new zone we reset the selected index.
                 zoneData.timer_selected = 1;
-                // Display 1st entry.
+                // Display 1st timer entry.
                 displayProgramEntry ();
                 displayCurrentTimerInfo ();
                 break;
@@ -294,7 +294,7 @@ $(document).ready(function (){
                 if ((previousKeyboard == "rad_zone_selected_keyboard")
                     ||
                     (previousKeyboard == "ufh_zone_selected_keyboard")) {
-                    $("#current_keyboard #" + zoneData.zone).addClass('btn-zone-clicked');
+                    $("#current_keyboard #" + zoneData.zone).addClass('btn_zone_clicked');
                     // Do a zone check this will cause the server to send the zone
                     // data to us which will then be re-displayed in the callback.
                     socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
@@ -307,28 +307,28 @@ $(document).ready(function (){
     // Is this an 'on at' time entry key?
     // These will be digits 0-9, plus the 'confirm' and 'cancel' keys.
     $("#keyboards").on('click', '.btn_on_at_entry', function (event) {
-        $(this).addClass('btn-digit-clicked');
+        $(this).addClass('btn_digit_clicked');
         processProgrammingKeys (this.id, "inputOnAtDigit");
     });
     
     // Is this an 'off at' time entry key?
     // These will be digits 0-9, plus the 'confirm' and 'cancel' keys.
     $("#keyboards").on('click', '.btn_off_at_entry', function (event) {
-    $(this).addClass('btn-digit-clicked');
+    $(this).addClass('btn_digit_clicked');
         processProgrammingKeys (this.id, "inputOffAtDigit");
     });
     
     // Is this a 'day' entry key?
     // These will be day keys, plus the 'confirm' and 'cancel' keys.
     $("#keyboards").on('click', '.btn_day_entry', function (event) {
-        $(this).addClass('btn-digit-clicked');
+        $(this).addClass('btn_digit_clicked');
         processProgrammingKeys (this.id, "inputDaysDay");
     });
  
  
     // Is this a 'confirm' or 'cancel' key for a delete operation?
     $("#keyboards").on('click', '.btn_confirm_cancel_delete', function (event) {
-        $(this).addClass('btn-digit-clicked');
+        $(this).addClass('btn_digit_clicked');
         switch (this.id) {
             case "control_confirm":
                 // Delete required element and dec number of entries.
@@ -357,7 +357,7 @@ $(document).ready(function (){
  
     // Is this a 'confirm' or 'cancel' key for a timer enable disable operation?
     $("#keyboards").on('click', '.btn_confirm_cancel_enable_disable', function (event) {
-        $(this).addClass('btn-digit-clicked');
+        $(this).addClass('btn_digit_clicked');
         switch (this.id) {
             case "control_confirm":
                 // If we are in a boost mode we clear it as we are changing mode.
@@ -522,6 +522,8 @@ $(document).ready(function (){
                 // Tell user if it is valid and if it is set modified flag so we
                 // send data to server when we are finished.
                 //if (checkIfValidTimes () == true) {
+                // Cancel any boost or suspend by going back to timer mode.
+                zoneData.mode = "timer";
                     // Flag we have made a change and save it.
                     zoneData.update = "pending";
                     allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
@@ -566,8 +568,8 @@ $(document).ready(function (){
         
         // Show 'confirm' key and set active now a key pressed.
         replaceKey ("key19", "confirm_key");
-        if ($("#control_confirm").hasClass("btn-select")) {
-            $("#control_confirm").toggleClass("btn-select btn_day_entry");
+        if ($("#control_confirm").hasClass("btn_select")) {
+            $("#control_confirm").toggleClass("btn_select btn_day_entry");
         }
 
         // Lookup for day info for each day key. This gives us the index
@@ -681,8 +683,8 @@ $(document).ready(function (){
             digitIndex = 0;
             setActiveDigitKeys ("hoursTens0To2" + op.keyUpdate);
             replaceKey ("key19", "confirm_key");
-            if ($("#control_confirm").hasClass("btn-select")) {
-                $("#control_confirm").toggleClass("btn-select btn_" + op.field + "entry");
+            if ($("#control_confirm").hasClass("btn_select")) {
+                $("#control_confirm").toggleClass("btn_select btn_" + op.field + "entry");
             }
             //checkIfValidTimes ();
             // If the on time > off time warn user both times will be set the same.
@@ -864,8 +866,8 @@ $(document).ready(function (){
         replaceKey ("key20", "cancel_key");
 
         // Highlight 'confirm' and 'cancel' keys, use enable disable class.
-        $("#control_confirm").toggleClass("btn-select btn_confirm_cancel_enable_disable");
-        $("#control_cancel").toggleClass("btn-select btn_confirm_cancel_enable_disable");
+        $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_enable_disable");
+        $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_enable_disable");
         
         // Set message for action that will be taken on confirm.
         var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
@@ -900,8 +902,8 @@ $(document).ready(function (){
         replaceKey ("key20", "cancel_key");
 
         // Highlight 'confirm' and 'cancel' keys, use delete class.
-        $("#control_confirm").toggleClass("btn-select btn_confirm_cancel_delete");
-        $("#control_cancel").toggleClass("btn-select btn_confirm_cancel_delete");
+        $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_delete");
+        $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_delete");
 
         // Highlight the whole middle line.
         $("#middle_line_program > div").css("color", "red");
@@ -932,7 +934,7 @@ $(document).ready(function (){
         
         // Change 'back' key to 'cancel' and highlight.
         replaceKey ("key20", "cancel_key");
-        $("#control_cancel").toggleClass("btn-select btn_day_entry");
+        $("#control_cancel").toggleClass("btn_select btn_day_entry");
 
         // Highlight 'days' keys.
         $("#current_keyboard .btn_day").toggleClass("btn_day btn_day_entry");
@@ -961,7 +963,7 @@ $(document).ready(function (){
         
         // Change 'back' key to 'cancel' and highlight.
         replaceKey ("key20", "cancel_key");
-        $("#control_cancel").toggleClass("btn-select btn_on_at_entry");
+        $("#control_cancel").toggleClass("btn_select btn_on_at_entry");
 
         // Start off with tens of hours valid keys (0,1,2)
         setActiveDigitKeys ("hoursTens0To2OnAt");
@@ -990,7 +992,7 @@ $(document).ready(function (){
         
         // Change 'back' key to 'cancel' and highlight.
         replaceKey ("key20", "cancel_key");
-        $("#control_cancel").toggleClass("btn-select btn_off_at_entry");
+        $("#control_cancel").toggleClass("btn_select btn_off_at_entry");
 
         // Start off with tens of hours valid keys (0,1,2)
         setActiveDigitKeys ("hoursTens0To2OffAt");
@@ -1127,9 +1129,8 @@ $(document).ready(function (){
 
     function checkIfValidTimes () {
         
-        // Get the timer number are we working on.
+        // Get the timer number and the times.
         var selectedEntry = zoneData.timer_selected;
-        // Get the times for the currently selected timer.
         var onTime = zoneData.timers [selectedEntry].on_at;
         var offTime = zoneData.timers [selectedEntry].off_at;
         var days = zoneData.timers [selectedEntry].days;
@@ -1258,7 +1259,7 @@ $(document).ready(function (){
     function displayZoneTimerInfo () {
         var numberOfTimers = zoneData.timer_entries;
         // Start the message with zone name.
-        var infoMessage = zoneData.name + " has ";
+        var infoMessage = zoneData.name + " - ";
         // Add number of timers.
         if (numberOfTimers) {
             infoMessage += numberOfTimers; 
@@ -1396,7 +1397,7 @@ $(document).ready(function (){
                     // We are 'suspended' so set 'resume' key active.
                     replaceKey ("key15", "resume_key");
                     // We will display the next on time.
-                    status += ("until " + onTime);
+                    status += ("(suspended) until " + onTime);
                 
                 } else {
                     // We are timed off.  We will display the next on time.
