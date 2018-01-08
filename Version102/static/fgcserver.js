@@ -156,12 +156,12 @@ $(document).ready(function (){
                 break;
             
             case "control_delete":
-                controlDelete ();
+                controlDelete (this.id);
                 break;
                 
             case "control_enable":
             case "control_disable":
-            controlEnableOrDisable ();
+            controlEnableOrDisable (this.id);
                 break;
                 
             case "control_resume":
@@ -272,6 +272,8 @@ $(document).ready(function (){
 
             case "control_finished":
                 updateServer ();
+                // Fall through to tidy up.
+                
             case "control_back":
                 // Clear any warning messages and number of entries.
                 $("#bottom_line_left").text ("");
@@ -325,67 +327,17 @@ $(document).ready(function (){
         processProgrammingKeys (this.id, "inputDaysDay");
     });
  
- 
     // Is this a 'confirm' or 'cancel' key for a delete operation?
     $("#keyboards").on('click', '.btn_confirm_cancel_delete', function (event) {
-        $(this).addClass('btn_digit_clicked');
-        switch (this.id) {
-            case "control_confirm":
-                // Delete required element and dec number of entries.
-                zoneData.timers.splice(zoneData.timer_selected, 1);
-                zoneData.timer_entries--;
-                if (zoneData.timer_selected > zoneData.timer_entries) {
-                    zoneData.timer_selected--;
-                }
-                // Flag we have made a change and re-display current status.
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                // Fall through as all further operations same as cancel.
-            case "control_cancel":
-                // Remove the highlight applied to the line. Clear any message.
-                $("#middle_line_program > div").removeAttr("style");
-                $("#bottom_line_left").text ("");
-                // Move back to program selection keyboard.
-                lastKeyboard.pop();
-                switchToKeyboard (lastKeyboard.pop());
-                // Display what is now the selected entry.
-                displayProgramEntry ();
-                displayCurrentTimerInfo ();
-                break;
-        }
+        //$(this).addClass('btn_digit_clicked');
+        controlDelete (this.id);
     });
  
     // Is this a 'confirm' or 'cancel' key for a timer enable disable operation?
     $("#keyboards").on('click', '.btn_confirm_cancel_enable_disable', function (event) {
-        $(this).addClass('btn_digit_clicked');
-        switch (this.id) {
-            case "control_confirm":
-                // If we are in a boost mode we clear it as we are changing mode.
-                if (zoneData.mode.slice (0, 6) == "boost_") {
-                    // Remove "boost_" from mode string.
-                    zoneData.mode = zoneData.mode.slice(6);
-                }
-                // Get current state and swap it.
-                var state = zoneData.timers [zoneData.timer_selected].enabled;               
-                zoneData.timers [zoneData.timer_selected].enabled = !state;
-                displayCurrentTimerInfo();
-                displayZoneStatus();
-                // Flag we have made a change and re-display current status.
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                // Fall through as all further operations same as cancel.
-            case "control_cancel":
-                // Move back to program selection keyboard.
-                lastKeyboard.pop();
-                switchToKeyboard (lastKeyboard.pop());
-                // Display what is now the selected entry.
-                displayProgramEntry ();
-                // Clear the message now we're done.
-                $("#bottom_line_left").text ("");
-                break;
-        }
+        //$(this).addClass('btn_digit_clicked');
+        controlEnableOrDisable (this.id);
     });
- 
  
     /******************************************************************************* 
     * Function: updateServer ()
@@ -409,7 +361,6 @@ $(document).ready(function (){
                 allZonesData [zone]["update"] == "sent";
 
                 // Update the server with the new zone data.
-               // var sendMessage = {"command":"zone_update", "payload":allZonesData [zone]}
                 socket.send (JSON.stringify ({"command":"zone_update", "payload":allZonesData [zone]}));
             }
         }
@@ -437,6 +388,8 @@ $(document).ready(function (){
             } else {
                 replaceKey ("key19", "enable_key");
             }
+        } else {
+            replaceKey ("key19", "blank_key");
         }
     }
         
@@ -457,7 +410,7 @@ $(document).ready(function (){
         
         // If there are no entries blank the 'Previous' and 'Next' keys.
         if (zoneData.timer_entries == 0) {
-            replaceKey ("key5", "blank_key");
+            lank_keyreplaceKey ("key5", "b");
             replaceKey ("key10", "blank_key");
         } else {
             // Get current value of selected index.
@@ -477,7 +430,6 @@ $(document).ready(function (){
             }
         }
     }
-
 
     /******************************************************************************* 
     * Function: processProgrammingKeys (keyId, field)
@@ -602,12 +554,12 @@ $(document).ready(function (){
         // Lookup to get data required for each type of operation.
         var fieldInfo = {
             "inputOnAtDigit":
-                {field:"on_at_", fieldType:"digit_", digitUpdate:"updateOnAtDigits", keyUpdate:"OnAt"},
+                {field:"on_at_", fieldType:"digit_", digitUpdate:"updateOnAtDigits", keyType:"OnAt"},
             "inputOffAtDigit":
-                {field:"off_at_", fieldType:"digit_", digitUpdate:"updateOffAtDigits", keyUpdate:"OffAt"}
+                {field:"off_at_", fieldType:"digit_", digitUpdate:"updateOffAtDigits", keyType:"OffAt"}
         };
         // Get all the data for this operation into object.
-        var op = fieldInfo[operation];
+        var op = fieldInfo [operation];
         
         // Find the current cursor location by looking for our cursor class.
         for (var digitIndex = 0; digitIndex < 5; digitIndex++) {
@@ -627,7 +579,7 @@ $(document).ready(function (){
             $("#bottom_line_left").text ("");
         }
         
-        // Get the digit from the keyboard and put it at the cursor location.
+        // Get the digit from our keyboard and put it at the cursor location.
         var digit = $("#current_keyboard #" + keyId).text();
         $("#middle_line #" + selectedDigit).text (digit);
         
@@ -638,25 +590,25 @@ $(document).ready(function (){
         // only allow 0-3 if it is 2.
         if (digitIndex == 1) {
             if (digit == 2) {
-                setActiveDigitKeys ("hoursUnits0To3" + op.keyUpdate);
+                setActiveDigitKeys ("hoursUnits0To3" + op.keyType);
             } else {
-                setActiveDigitKeys ("allUnits" + op.keyUpdate);
+                setActiveDigitKeys ("allUnits" + op.keyType);
             }
         
         // If we're at the colon move to tens of minutes and set 0-5 digits active.
         } else if (digitIndex == 2) {
             digitIndex++;
-            setActiveDigitKeys ("minutesTens" + op.keyUpdate);
+            setActiveDigitKeys ("minutesTens" + op.keyType);
         
         // If we're at minutes units set all digits active.    
         } else if (digitIndex == 4) {
-            setActiveDigitKeys ("allUnits" + op.keyUpdate);
+            setActiveDigitKeys ("allUnits" + op.keyType);
         
         // If we're at the end wrap back to tens of hours and set 0-2 digits active.
         // Enable 'confirm' key.
         } else if (digitIndex > 4) {
             digitIndex = 0;
-            setActiveDigitKeys ("hoursTens0To2" + op.keyUpdate);
+            setActiveDigitKeys ("hoursTens0To2" + op.keyType);
             replaceKey ("key19", "confirm_key");
             if ($("#control_confirm").hasClass("btn_select")) {
                 $("#control_confirm").toggleClass("btn_select btn_" + op.field + "entry");
@@ -684,7 +636,7 @@ $(document).ready(function (){
     * Parameters: operation - specifies the operation to perform - highlight etc
     *             fieldText - text to load (if required).
     * 
-    * Returns: Nothing.
+    * Returns: the digit if we do a read operation.
     * 
     * Globals modified: None.
     * 
@@ -695,7 +647,9 @@ $(document).ready(function (){
     
     function dataFieldOperation (operation, fieldText) {
 
-        // Lookup to get data required for each type of operation.
+        // Lookup to get data required for each type of operation. For a supplied
+        // operation we will lookup the field to use: on off or days, whether it is
+        // a digit or day and what we want to do: highlight, read etc
         var fieldInfo = {
             "highlightOnAtDigits":
                 {field:"on_at_", fieldType:"digit_", action:"highlight"},
@@ -724,42 +678,54 @@ $(document).ready(function (){
         };
         // Get all the data for this operation into object.
         var op = fieldInfo[operation];
-        var selectedDigit;
+        // Create digit type. We use this for working on each digit.
+        var selectedDigit = op.field + op.fieldType;
+        // Create field type. We use this for working on a field of digits.
+        var selectedField = op.field + "field";
 
         switch (op.action) {
             
             case "read":
                 fieldText = "";
-                // Copy the locations into feldText and return to caller.
+                // Copy displayed digits/days into feldText and return to caller.
                 // Note: trim is used to remove unexplained leading spaces!
                 for (var digitIndex = 0; digitIndex < op.digits; digitIndex++) {
-                    selectedDigit = op.field + op.fieldType + digitIndex; 
-                    fieldText += $("#middle_line #" + selectedDigit).text ().trim();
+                    fieldText += $("#middle_line #" + selectedDigit + digitIndex).text ().trim();
                 }
+                // Send read digits/days back to caller.
                 return (fieldText);
 
             case "update":
-                // Copy the fieldText into the required locations.
+                // Copy the supplied fieldText into the displayed digits/days.
                 for (var digitIndex = 0; digitIndex < op.digits; digitIndex++) {
-                    selectedDigit = op.field + op.fieldType + digitIndex; 
-                    $("#middle_line #" + selectedDigit).text (fieldText [digitIndex]);
+                    $("#middle_line #" + selectedDigit + digitIndex).text (fieldText [digitIndex]);
                 }
                 return ("");
 
             case "highlight":
-                op.field += "field";
-                // Highligtht the field and start 1st digit blinking for digits.
-                $("#middle_line ." + op.field).toggleClass (op.field + " " + op.field + "_selected");
+                // Highligtht the field. 
+                $("#middle_line ." + selectedField).toggleClass (selectedField +
+                                                                 " " +
+                                                                 selectedField +
+                                                                 "_selected");
+                // Start 1st digit blinking for digits only.                                                 
                 if (op.fieldType == "digit_") {
-                    $("#middle_line ." + op.field + "_selected:first").toggleClass (op.field + "_selected" + " " + op.field + "_selected_cursor");
+                    $("#middle_line ." + selectedField + "_selected:first").toggleClass (selectedField +
+                                                                                         "_selected " +
+                                                                                         selectedField +
+                                                                                         "_selected_cursor");
                 }
                 return ("");
                 
             case "unHighlight":
-                op.field += "field";
-                // Restore field to normal (no highlighting or blinking).
-                $("#middle_line ." + op.field + "_selected_cursor").toggleClass (op.field + "_selected_cursor" + " " + op.field);
-                $("#middle_line ." + op.field + "_selected").toggleClass (op.field + "_selected" + " " + op.field);
+                // Restore field to normal no blinking cursor.
+                $("#middle_line ." + selectedField + "_selected_cursor").toggleClass (selectedField +
+                                                                                      "_selected_cursor " +
+                                                                                      selectedField);
+                // Restore field to normal no highlight.
+                $("#middle_line ." + selectedField + "_selected").toggleClass (selectedField +
+                                                                               "_selected " + 
+                                                                               selectedField);
                 return ("");
         }
     }
@@ -773,10 +739,11 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Sets only those digits active that are allowed for the digit
+    * position. E.g. Only digits 0,1 and 2 alloed for hours tens position.
     * 
     ********************************************************************************/
-    function setActiveDigitKeys (operation){
+    function setActiveDigitKeys (operation) {
         
         // Lookup to get data required for each type of operation.
         var fieldInfo = {
@@ -807,11 +774,10 @@ $(document).ready(function (){
         }
     }
     
-   
     /******************************************************************************* 
     * Function: controlEnableOrDisable ()
     * 
-    * Parameters:
+    * Parameters: keyId - the id assigned to the key.
     * 
     * Returns:
     * 
@@ -821,33 +787,63 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlEnableOrDisable () {
+    function controlEnableOrDisable (keyId) {
         
-        // Use time entry keyboard as base keyboard.
-        switchToKeyboard ("time_entry_keyboard");
-        
-        // Add confirm and cancel keys.
-        replaceKey ("key19", "confirm_key");
-        replaceKey ("key20", "cancel_key");
+        switch (keyId) {
+            case "control_enable":
+            case "control_disable":
+                // Use time entry keyboard as base keyboard.
+                switchToKeyboard ("time_entry_keyboard");
+                
+                // Add confirm and cancel keys.
+                replaceKey ("key19", "confirm_key");
+                replaceKey ("key20", "cancel_key");
 
-        // Highlight 'confirm' and 'cancel' keys, use enable disable class.
-        $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_enable_disable");
-        $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_enable_disable");
-        
-        // Set message for action that will be taken on confirm.
-        var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
+                // Highlight 'confirm' and 'cancel' keys, use enable disable class.
+                $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_enable_disable");
+                $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_enable_disable");
+                
+                // Set message for action that will be taken on confirm.
+                var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
 
-        // Display message.
-        $("#bottom_line_left").text ("Set Timer " + zoneData.timer_selected +
-                                     " to " + newState + 
-                                     "? - 'Confirm' or 'Cancel'");
+                // Display message.
+                $("#bottom_line_left").text ("Set Timer " + zoneData.timer_selected +
+                                            " to " + newState + 
+                                            "? - 'Confirm' or 'Cancel'");
+                break;
+
+            case "control_confirm":
+                // If we are in a boost mode we clear it as we are changing mode.
+                if (zoneData.mode.slice (0, 6) == "boost_") {
+                    // Remove "boost_" from mode string.
+                    zoneData.mode = zoneData.mode.slice(6);
+                }
+                // Get current enable state and swap it.
+                var state = zoneData.timers [zoneData.timer_selected].enabled;               
+                zoneData.timers [zoneData.timer_selected].enabled = !state;
+                displayCurrentTimerInfo();
+                displayZoneStatus();
+                // Flag we have made a change and save it.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+                // Fall through as all further operations same as cancel.
+            
+                case "control_cancel":
+                // Move back to program selection keyboard.
+                lastKeyboard.pop();
+                switchToKeyboard (lastKeyboard.pop());
+                // Display what is now the selected entry.
+                displayProgramEntry ();
+                // Clear the message now we're done.
+                $("#bottom_line_left").text ("");
+                break;
+        }
     }
-
 
     /******************************************************************************* 
-    * Function: controlDelete ()
+    * Function: controlDelete (keyId)
     * 
-    * Parameters:
+    * Parameters: keyId - the id assigned to the key.
     * 
     * Returns:
     * 
@@ -857,28 +853,55 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlDelete () {
+    function controlDelete (keyId) {
         
-        // Use time entry keyboard as base keyboard.
-        switchToKeyboard ("time_entry_keyboard");
-        
-        // Add confirm and cancel keys.
-        replaceKey ("key19", "confirm_key");
-        replaceKey ("key20", "cancel_key");
+        switch (keyId) {
+            case "control_delete":
+                // Use time entry keyboard as base keyboard.
+                switchToKeyboard ("time_entry_keyboard");
+                
+                // Add confirm and cancel keys.
+                replaceKey ("key19", "confirm_key");
+                replaceKey ("key20", "cancel_key");
 
-        // Highlight 'confirm' and 'cancel' keys, use delete class.
-        $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_delete");
-        $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_delete");
+                // Highlight 'confirm' and 'cancel' keys, use confirm/cancel/delete class.
+                $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_delete");
+                $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_delete");
 
-        // Highlight the whole middle line.
-        $("#middle_line_program > div").css("color", "red");
-        
-        // Display message.
-        $("#bottom_line_left").text ("Delete timer " + 
-                                     zoneData.timer_selected +
-                                     "? - 'Confirm' or 'Cancel'");
+                // Highlight the whole middle line.
+                $("#middle_line_program > div").css("color", "red");
+                
+                // Display message.
+                $("#bottom_line_left").text ("Delete timer " + 
+                                            zoneData.timer_selected +
+                                            "? - 'Confirm' or 'Cancel'");
+                break;
+
+            case "control_confirm":
+                // Delete required element and dec number of entries.
+                zoneData.timers.splice(zoneData.timer_selected, 1);
+                zoneData.timer_entries--;
+                if (zoneData.timer_selected > zoneData.timer_entries) {
+                    zoneData.timer_selected--;
+                }
+                // Flag we have made a change and save it.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+                // Fall through as all further operations same as cancel.
+
+            case "control_cancel":
+                // Remove the highlight applied to the line. Clear any message.
+                $("#middle_line_program > div").removeAttr("style");
+                $("#bottom_line_left").text ("");
+                // Move back to program selection keyboard.
+                lastKeyboard.pop();
+                switchToKeyboard (lastKeyboard.pop());
+                // Display what is now the selected entry.
+                displayProgramEntry ();
+                displayCurrentTimerInfo ();
+                break;
+        }
     }
-
 
     /******************************************************************************* 
     * Function: controlDays ()
@@ -907,7 +930,6 @@ $(document).ready(function (){
         // Highlight 'days' text in display.
         dataFieldOperation ("highlightDays");
    }
-   
 
     /******************************************************************************* 
     * Function: controlOnAt ()
@@ -936,7 +958,6 @@ $(document).ready(function (){
         // Highlight 'on at' text in display, sets cursor on digit 1.
         dataFieldOperation ("highlightOnAtDigits");
     }
-
 
     /******************************************************************************* 
     * Function: controlOffAt ()
@@ -1078,7 +1099,6 @@ $(document).ready(function (){
         updateEnableDisableKeys ();
     }
     
-
     /******************************************************************************* 
     * Function: checkIfValidTimes ()
     * 
@@ -1139,8 +1159,7 @@ $(document).ready(function (){
         // We say time is OK even if timers conflict as user may want overlapping times.
         return (true);
     }
-    
-    
+     
     /******************************************************************************* 
     * Function: displayStates ()
     * 
@@ -1180,7 +1199,6 @@ $(document).ready(function (){
             }
         }
     }
-
 
     /******************************************************************************* 
     * Function: displayCurrentTimerInfo ()
@@ -1294,8 +1312,7 @@ $(document).ready(function (){
         // Display message at top left of display.
         $("#display_top1").text (infoMessage);
     }
-    
-    
+       
     /******************************************************************************* 
     * Function: displayZoneStatus ()
     * 
@@ -1376,7 +1393,6 @@ $(document).ready(function (){
         $("#middle_line_program #status_text").text (status);
     }
 
-
     /******************************************************************************* 
     * Function: replaceKey (location, key) 
     * 
@@ -1414,7 +1430,7 @@ $(document).ready(function (){
     * we remove the previous cloned one. For some keyboards we only update certain keys.
     * In this case we use a lookup to check which keys to update.
     ********************************************************************************/
-//b1
+
     function switchToKeyboard (newId) {
         // For each keyboard where we change only keys we hold the keyboard id and
         // an array of the old and new key ids that we will change.
