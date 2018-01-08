@@ -283,12 +283,12 @@ body, html, .container-fluid {
 .keyboard {
     height: 100%;
 }
-.rad-keyboard {
+/*.rad-keyboard {
     height: 100%;
 }
 .ufh-keyboard {
     height: 100%;
-}
+}*/
 .hide_keyboard {
     display: none;
 }

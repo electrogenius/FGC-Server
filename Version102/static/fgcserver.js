@@ -494,40 +494,15 @@ $(document).ready(function (){
 
     function processProgrammingKeys (keyId, field) {
         
-        // Get the times that are displayed.
-        var onTime = dataFieldOperation ("readOnAtDigits");
-        var offTime = dataFieldOperation ("readOffAtDigits");
-        var days = dataFieldOperation ("readDayDays");
-        var selectedEntry = zoneData.timer_selected;
-        
         switch (keyId) {
             case "control_confirm":
-                // If 'on at' time > 'off at' time make them the same.
-                //if (onTime > offTime) {
-                    // We need to find out if we were programming 'on at' or 'off at' times.
-                    // This is so that we adjust the correct one. Do this by checking if
-                    // either has the cursor.
-                //    if ($("#middle_line #on_at_digit_0").hasClass ("on_at_field_selected_cursor")) {
-                        // Make off the same as on.
-                //        offTime = onTime;
-                //    } else if ($("#middle_line #off_at_digit_0").hasClass ("off_at_field_selected_cursor")){
-                        // Make on the same as off.
-                    //    onTime = offTime;
-                //    }
-               // }
-                // Update on and off digits in display and then save. 
-               // dataFieldOperation ("updateOnAtDigits", onTime);
-               // dataFieldOperation ("updateOffAtDigits", offTime);
-                saveProgramEntry (selectedEntry);
-                // Tell user if it is valid and if it is set modified flag so we
-                // send data to server when we are finished.
-                //if (checkIfValidTimes () == true) {
+                // User wants to keep the data.
+                saveProgramEntry (zoneData.timer_selected);
                 // Cancel any boost or suspend by going back to timer mode.
                 zoneData.mode = "timer";
-                    // Flag we have made a change and save it.
-                    zoneData.update = "pending";
-                    allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                //}
+                // Flag we have made a change and save it.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 // Fall through to cleanup.
             case "control_cancel":
                 // Move back to last keyboard (program selection).
@@ -686,16 +661,6 @@ $(document).ready(function (){
             if ($("#control_confirm").hasClass("btn_select")) {
                 $("#control_confirm").toggleClass("btn_select btn_" + op.field + "entry");
             }
-            //checkIfValidTimes ();
-            // If the on time > off time warn user both times will be set the same.
-           // if (dataFieldOperation ("readOnAtDigits") > dataFieldOperation ("readOffAtDigits")){
-            //    // Create and display warning message at bottom left of display.
-            //    var warningMessage = "Warning: ";
-            //    warningMessage += (op.field == "on_at_") ? "'off at time' " : "'on at time' ";
-           //     warningMessage += "will be set to ";
-           //     warningMessage += (op.field == "on_at_") ? "'on at time.'" : "'off at time'.";
-            //    $("#bottom_line_left").text (warningMessage);
-            //}
         }
         
         // Create selector for next location.
@@ -802,7 +767,7 @@ $(document).ready(function (){
     /******************************************************************************* 
     * Function: setActiveDigitKeys (operation)
     * 
-    * Parameters:
+    * Parameters: operation - string - describes which keyboard digits are active
     * 
     * Returns:
     * 
