@@ -37,8 +37,8 @@ $(document).ready(function (){
             case "zone_check_reply":
             case "zone_data_reply":
                 // The server has replied to a request for data for a zone.
-                // Keep a copy in our current zone data and also in all our
-                // zone data. We keep in the latter so we do not have to
+                // Keep a copy in our current zoneData and also in all our
+                // allZonesData. We keep in the latter so we do not have to
                 // reload the data if we return to the zone. We use json parse
                 // each time so that we have a deep copy and not just a reference.
                 zoneData = JSON.parse(msg).payload;
@@ -57,7 +57,7 @@ $(document).ready(function (){
                 break;
             
                 case "console_message":
-                console.log ("SERVER", messageData.payload);
+                console.log ("MESSAGE", messageData.payload);
                 break;
 
                 case "zone_states":
@@ -100,7 +100,7 @@ $(document).ready(function (){
         }
         // Clear the select band from all zone buttons.
         $("#current_keyboard .btn_zone").removeClass('btn_zone_clicked');
-        // Set select band for this button.
+        // Now set select band for this button.
         $("#current_keyboard #" + this.id).addClass('btn_zone_clicked');
         // Show which zones are on with green background.
         displayStates ();
@@ -193,61 +193,9 @@ $(document).ready(function (){
                 break;
                 
             case "control_boost_1_hour":
-                // If we are in 'timer' mode and on add boost to
-                // the off time, othewise use the current time.
-                if (zoneData.mode == "timer") {
-                    // Flag we are now in boost mode.
-                    zoneData.mode = "boost_" + zoneData.mode;
-                    if (zoneData.zone_state == "on") {
-                        zoneData.boost_off_time = getTime (1, zoneData.next_off_time);
-                    } else {
-                        zoneData.boost_off_time = getTime (1, "current");
-                    }
-                } else {
-                    // Add boost to current time as we are in manual or suspended mode.
-                    zoneData.boost_off_time = getTime (1, "current");
-                    // Flag we are now in boost mode.
-                    zoneData.mode = "boost_" + zoneData.mode;
-                }
-                // Flag we have turned zone on and re-display current status.
-                zoneData.zone_state = "on";
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayZoneStatus ();
-                displayStates ();
-                // Change boost key to 2 hours so user can press boost key
-                // twice to get 2 hours. This must be after displayZoneStatus() as
-                // displayZoneStatus() sets the boost key to boost off. 
-                replaceKey ("key10", "boost_2_hours_key");
-                break;
-                
             case "control_boost_2_hours":
-                // We are already in 'boost' mode so add another 1 hour boost to
-                // the boost time.
-                zoneData.boost_off_time = getTime (1, zoneData.boost_off_time);
-                // Flag we have made a change and re-display current status.
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayZoneStatus ();
-                displayStates ();
-                // We do not need to set boost key here as displayZoneStatus will
-                // set it to boost off.
-                break;
-                
             case "control_boost_off":
-                // Put mode back to how it was before boost by removing "boost_" from
-                // the mode string.
-                zoneData.mode = zoneData.mode.slice(6);
-                // Flag we have made a change and update zone info.
-                zoneData.zone_state = "off";
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                // We may have boosted a timer so we need to check if it is still active.
-                // We will do a zone check this will cause the server to send the zone
-                // data to us which will then be re-displayed in the callback.
-                socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
-                // Note: We do not need to set boost key here as displayZoneStatus will
-                // set it to boost 1 hour.
+                controlBoost (this.id);
                 break;
                 
             case "control_new":
@@ -350,8 +298,7 @@ $(document).ready(function (){
     * 
     * Comments:
     * 
-    ********************************************************************************/
-    
+    ********************************************************************************/   
     function updateServer () {
         // Scan through all our zones.
         for (var zone in allZonesData) {
@@ -377,8 +324,7 @@ $(document).ready(function (){
     * 
     * Comments:
     * 
-    ********************************************************************************/
-    
+    ********************************************************************************/   
     function updateEnableDisableKeys () {
         // Only set key if we have timers.
         if (zoneData.timer_entries) {
@@ -404,8 +350,7 @@ $(document).ready(function (){
     * 
     * Comments:
     * 
-    ********************************************************************************/
-    
+    ********************************************************************************/   
     function updatePreviousNextKeys () {
         
         // If there are no entries blank the 'Previous' and 'Next' keys.
@@ -443,7 +388,6 @@ $(document).ready(function (){
     * Comments:
     * 
     ********************************************************************************/
-
     function processProgrammingKeys (keyId, field) {
         
         switch (keyId) {
@@ -481,16 +425,17 @@ $(document).ready(function (){
     /******************************************************************************* 
     * Function: processDayKey (keyId)
     * 
-    * Parameters:
+    * Parameters: keyId - the id assigned to the key.
     * 
     * Returns:
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Sets or clears timer days. If a day is not set it will be set and
+    * vice versa. For multiple day keys if any day is not set they will all be set
+    * and if they are all set they will all be cleared.
     * 
     ********************************************************************************/
-
     function processDayKey (keyId) {
         
         // Show 'confirm' key and set active now a key pressed.
@@ -500,7 +445,7 @@ $(document).ready(function (){
         }
 
         // Lookup for day info for each day key. This gives us the index
-        // for the day field and the day letter.
+        // for the day field and the day letter for all the days valid for the key.
         var dayInfo = {
             "day_mon":[0,"M"], "day_tue":[1,"T"], "day_wed":[2,"W"], "day_thu":[3,"T"],
             "day_fri":[4,"F"], "day_sat":[5,"S"], "day_sun":[6,"S"],
@@ -509,64 +454,75 @@ $(document).ready(function (){
             "day_every_day":[0,1,2,3,4,5,6,"M","T","W","T","F","S","S"]
         };
         
-        var startIndex = dayInfo[keyId][0];
-        var numberOfFields = (dayInfo[keyId].length)/2;
+        // Get where this day field is. For muliple day keys it is the 1st day
+        // of the muliple days (e.g. Sat & Sun = 6) .
+        var startIndex = dayInfo [keyId][0];
+        // Get the number of day fields to scan. The lookup entries have 2 elements per day
+        // (the index and the letter) so we halve that.
+        var numberOfFields = (dayInfo [keyId].length)/2;
+        // Flag to show if we set or clear a day field.
         var fieldSet = false;
-        var length = 0;
         
-        // Scan through the required day fields.
-        for (var index = startIndex; length < numberOfFields; length++, index++  ) {
+        // Scan through the required day fields. We start at the required day
+        for (var index = startIndex, letterIndex = 0; letterIndex < numberOfFields; letterIndex++, index++  ) {
             
             // Get the existing day field, it will either be a letter M,T,W,F,S or _.
             var currentDay =  $("#middle_line #days_day_" + index).text().trim();
             
-            // If a field has no letter then set the letter and flag we have set one.
+            // If the field has no letter then set the letter and flag we have set one.
+            // index is pointing to the day field. Because numberOfFields is (number of elements)/2
+            // it is pointing to the start of the day letters so if we add the letterIndex we
+            // are pointing at the letter to insert.
             if (currentDay == "_") {
-               $("#middle_line #days_day_" + index).text(dayInfo[keyId][length + numberOfFields]);
+               $("#middle_line #days_day_" + index).text(dayInfo[keyId][letterIndex + numberOfFields]);
                fieldSet = true;
             } 
         }
-        length = 0;
+        letterIndex = 0;
         // If we didn't set a field then it (they) were already all set so clear it (them).
         if (fieldSet == false) {
-           for (var index = startIndex; length < numberOfFields; length++, index++  ) {
+           for (var index = startIndex; letterIndex < numberOfFields; letterIndex++, index++  ) {
                $("#middle_line #days_day_" + index).text("_");
            }
         }
     }
     
-
     /******************************************************************************* 
     * Function: processDigitKey (keyId, operation)
     * 
-    * Parameters:
+    * Parameters: keyId - the id assigned to the key.
+    *             operation - specifies if key is to be used for off or on times.
     * 
     * Returns:
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Gets digit keys from our keyboard and places them at the correct
+    * digit location. Only those digits that are valid for the digit location will
+    * be set active (e.g. Hours tens can only be 0,1 &2). Also controls the position
+    * of the flashing cursor.
     * 
     ********************************************************************************/
-
     function processDigitKey (keyId, operation) {
 
-        // Lookup to get data required for each type of operation.
+        // Lookup to get data required for on or off digits.
         var fieldInfo = {
             "inputOnAtDigit":
-                {field:"on_at_", fieldType:"digit_", digitUpdate:"updateOnAtDigits", keyType:"OnAt"},
+                {field:"on_at_", digitsToUpdate:"updateOnAtDigits", keyType:"OnAt"},
             "inputOffAtDigit":
-                {field:"off_at_", fieldType:"digit_", digitUpdate:"updateOffAtDigits", keyType:"OffAt"}
+                {field:"off_at_", digitsToUpdate:"updateOffAtDigits", keyType:"OffAt"}
         };
         // Get all the data for this operation into object.
         var op = fieldInfo [operation];
-        
+
         // Find the current cursor location by looking for our cursor class.
+        var selectedDigit;
         for (var digitIndex = 0; digitIndex < 5; digitIndex++) {
             // Create selector for location.
-            var selectedDigit = op.field + op.fieldType + digitIndex; 
-            // If we find the cursor exit.
-            if ( $("#middle_line #" + selectedDigit).hasClass (op.field + "field_selected_cursor")) {
+            selectedDigit = "#" + op.field + "digit_" + digitIndex; 
+            // If we find the cursor exit. digitIndex will have the cursor location.
+            // selectedDigit will have the cursor selector.
+            if ( $("#middle_line" + " " + selectedDigit).hasClass (op.field + "field_selected_cursor")) {
                 break;
             }    
         }
@@ -574,14 +530,14 @@ $(document).ready(function (){
         // Remove 'confirm' key. We will display it when all 4 digits entered.
         // Clear any warning message.
         if (digitIndex == 0) {
-            dataFieldOperation (op.digitUpdate, "__:__");
+            dataFieldOperation (op.digitsToUpdate, "__:__");
             replaceKey ("key19", "blank_key");
             $("#bottom_line_left").text ("");
         }
         
-        // Get the digit from our keyboard and put it at the cursor location.
+        // Get the digit from our keyboard and put it at the cursor selector.
         var digit = $("#current_keyboard #" + keyId).text();
-        $("#middle_line #" + selectedDigit).text (digit);
+        $("#middle_line" + " " + selectedDigit).text (digit);
         
         // Update cursor position and decide what to do depending where we are.
         digitIndex++;
@@ -616,19 +572,17 @@ $(document).ready(function (){
         }
         
         // Create selector for next location.
-        var nextSelectedDigit = op.field + op.fieldType + digitIndex; 
+        var nextSelectedDigit = "#" + op.field + "digit_" + digitIndex; 
        
         // All further field accesses include 'field_selected' so add it.
         op.field += "field_selected";
                 
         // Turn cursor off at this location.
-        $("#middle_line #" + selectedDigit).toggleClass(op.field +"_cursor " + op.field);
+        $("#middle_line" + " " + selectedDigit).toggleClass(op.field +"_cursor " + op.field);
         
         // Turn cursor on at next location
-        $("#middle_line #" + nextSelectedDigit).toggleClass(op.field + "_cursor " + op.field);
-        
+        $("#middle_line" + " " + nextSelectedDigit).toggleClass(op.field + "_cursor " + op.field);      
     }
-
 
     /******************************************************************************* 
     * Function: dataFieldOperation (operation, fieldText)
@@ -643,8 +597,7 @@ $(document).ready(function (){
     * Comments: Highlights, un-highlights, updates the 'on at', 'off at' and 'days'
     * fields. Starts blinking of 1st digit.
     * 
-    ********************************************************************************/
-    
+    ********************************************************************************/ 
     function dataFieldOperation (operation, fieldText) {
 
         // Lookup to get data required for each type of operation. For a supplied
@@ -740,7 +693,8 @@ $(document).ready(function (){
     * Globals modified:
     * 
     * Comments: Sets only those digits active that are allowed for the digit
-    * position. E.g. Only digits 0,1 and 2 alloed for hours tens position.
+    * position. E.g. Only digits 0,1 and 2 alloed for hours tens position. Also
+    * specifies if the key will be for on or off digit entry.
     * 
     ********************************************************************************/
     function setActiveDigitKeys (operation) {
@@ -757,17 +711,19 @@ $(document).ready(function (){
             "allUnitsOffAt":{field:"off_at_", maxDigit:9}
         };
         // Get all the data for this operation into object.
-        var op = fieldInfo[operation];
+        var op = fieldInfo [operation];
 
-        
         // Scan through all the digits.
         for (var digit = 0; digit <= 9; digit++){
             // Clear back to basic button.
             $("#current_keyboard #digit_" + digit).removeClass("btn_digit  btn_" + op.field + "entry");
             // Do we need to make button active?
             if (digit <= op.maxDigit) {
+                // Make digit active by giving it a class that specifies if it is on or off entry. Then
+                // when digit is pressed we will know if it is for on or off.
                 $("#current_keyboard #digit_" + digit).addClass("btn_" + op.field + "entry");
             } else {
+                // Digit not valid for this position so just set as basic digit.
                 $("#current_keyboard #digit_" + digit).addClass("btn_digit");
             }
             
@@ -775,7 +731,7 @@ $(document).ready(function (){
     }
     
     /******************************************************************************* 
-    * Function: controlEnableOrDisable ()
+    * Function: controlBoost (keyId)
     * 
     * Parameters: keyId - the id assigned to the key.
     * 
@@ -783,10 +739,91 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Turns a zone on for an extra period of time. The boost key is alternate
+    * action. 1st press is initial boost period, 2nd press doubles this, 3rd press
+    * cancels boost. If a zone is selected that is already in boost the 1st press
+    * will be cancel boost.
     * 
+    * NB WE NEED TO MODIFY FOR UFH BOOST TIMES
+    *
     ********************************************************************************/
+    function controlBoost (keyId) {
+        
+        switch (keyId) {
+            case "control_boost_1_hour":
+                // If we are in 'timer' mode and the zone is on add boost to
+                // the off time, othewise add to the current time.
+                if ((zoneData.mode == "timer") && (zoneData.zone_state == "on")) {
+                    zoneData.boost_off_time = getTime (1, zoneData.next_off_time);
+                } else {
+                    // Add boost to current time as we are in manual or suspended mode.
+                    zoneData.boost_off_time = getTime (1, "current");
+                }
+                // Flag we are now in boost mode and show zone on. We prepend "boost_"
+                // to the existing mode so that when boost ends we can revert to
+                // whatever mode we were in by stripping the "boost_" off.
+                zoneData.mode = "boost_" + zoneData.mode;
+                zoneData.zone_state = "on";
+                // Flag we have turned zone on and re-display current status.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+                displayZoneStatus ();
+                displayStates ();
+                // Change boost key to 2 hours so user can press boost key
+                // twice to get 2 hours. This must be after displayZoneStatus() as
+                // displayZoneStatus() sets the boost key to boost off. 
+                replaceKey ("key10", "boost_2_hours_key");
+                break;
 
+            case "control_boost_2_hours":
+                // We are already in 'boost' mode so add another 1 hour boost to
+                // the boost time.
+                zoneData.boost_off_time = getTime (1, zoneData.boost_off_time);
+                // Flag we have made a change and re-display current status.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+                displayZoneStatus ();
+                displayStates ();
+                // We do not need to set boost off key here as displayZoneStatus will
+                // set it to boost off.
+                break;
+                
+            case "control_boost_off":
+                // Put mode back to how it was before boost by removing "boost_" from
+                // the mode string and show the zone is off (this may change below if
+                // we were on a timer).
+                zoneData.mode = zoneData.mode.slice(6);
+                zoneData.zone_state = "off";
+                // Flag we have made a change and update zone info.
+                zoneData.update = "pending";
+                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+                // We may have boosted a timer so we need to check if it is still active.
+                // We will do a zone check this will cause the server to send the zone
+                // data to us which will then be re-displayed in the callback.
+                socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
+                // Note: We do not need to set boost key here as displayZoneStatus will
+                // set it to boost 1 hour.
+                break;             
+        }
+    }
+
+    /******************************************************************************* 
+    * Function: controlEnableOrDisable (keyId)
+    * 
+    * Parameters: keyId - the id assigned to the key.
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments: Enable or disable a timer entry. This allows us to set up multiple
+    * timers and switch between them. This is useful for holiday periods when different
+    * times may be required and avoids having to change a timer each time. Pressing
+    * enable/disable will activate the confirm and cancel keys with a 
+    * btn_confirm_cancel_enable_disable class. Pressing either of these
+    * keys will return us here. We can then either enable/disable the entry or leave
+    * as is.
+    ********************************************************************************/
     function controlEnableOrDisable (keyId) {
         
         switch (keyId) {
@@ -799,7 +836,8 @@ $(document).ready(function (){
                 replaceKey ("key19", "confirm_key");
                 replaceKey ("key20", "cancel_key");
 
-                // Highlight 'confirm' and 'cancel' keys, use enable disable class.
+                // Highlight 'confirm' and 'cancel' keys, use enable disable class so that we 
+                // are returned to this function when either key is clicked.
                 $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_enable_disable");
                 $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_enable_disable");
                 
@@ -849,8 +887,10 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
-    * 
+    * Comments: Delete a timer entry. Pressing delete will activate the confirm and
+    * cancel keys with a btn_confirm_cancel_delete class. Pressing either of these
+    * keys will return us here. We can then either delete the entry or leave as is.
+    *
     ********************************************************************************/
 
     function controlDelete (keyId) {
@@ -864,14 +904,15 @@ $(document).ready(function (){
                 replaceKey ("key19", "confirm_key");
                 replaceKey ("key20", "cancel_key");
 
-                // Highlight 'confirm' and 'cancel' keys, use confirm/cancel/delete class.
+                // Highlight 'confirm' and 'cancel' keys, use confirm/cancel/delete class
+                // so that we are returned to this function when either key is clicked.
                 $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_delete");
                 $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_delete");
 
                 // Highlight the whole middle line.
                 $("#middle_line_program > div").css("color", "red");
                 
-                // Display message.
+                // Display message asking user to confirm or cancel.
                 $("#bottom_line_left").text ("Delete timer " + 
                                             zoneData.timer_selected +
                                             "? - 'Confirm' or 'Cancel'");
@@ -884,6 +925,7 @@ $(document).ready(function (){
                 if (zoneData.timer_selected > zoneData.timer_entries) {
                     zoneData.timer_selected--;
                 }
+                zoneData.zone_state = "off";
                 // Flag we have made a change and save it.
                 zoneData.update = "pending";
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
@@ -988,9 +1030,9 @@ $(document).ready(function (){
     }
         
     /******************************************************************************* 
-    * Function: controlPreviousOrNext (id)
+    * Function: controlPreviousOrNext (keyId)
     * 
-    * Parameters:
+    * Parameters: keyId - the id assigned to the key.
     * 
     * Returns:
     * 
@@ -1000,13 +1042,13 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlPreviousOrNext (id) {
+    function controlPreviousOrNext (keyId) {
         
         // Get current value of index to program entry.
         var selectedEntry = zoneData.timer_selected;
 
         // Check if previous or next key.
-        if (id == "control_previous") {
+        if (keyId == "control_previous") {
             // Previous key. If we're not at the first entry dec index.
             if (selectedEntry > 1) {
                 selectedEntry--;

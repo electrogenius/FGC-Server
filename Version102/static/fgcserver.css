@@ -48,11 +48,6 @@ html *{
 .btn_digit_clicked,  .btn-digit-clicked:focus {
     color:white;
 }
-/* Define our active digit entry key style. */
-.btn_digit_entry {
-    border-color:red;
-    opacity:1;
-}
 /* Define our active 'on at' entry key style. */
 .btn_on_at_entry {
     border-color:red;
