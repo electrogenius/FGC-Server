@@ -24,14 +24,29 @@ html *{
 .btn_day {
     border-color:grey;
 }
-/* Define our delete 'confirm' and 'cancel' key style. */
-.btn_confirm_cancel_delete {
-    border-color:red;
+/* Define our previous/next key style. */
+.btn_previous_next {
+    border-color:cyan;
     opacity:1;
 }
-/* Define our program/man 'confirm' and 'cancel' key style. */
-.btn_confirm_cancel_enable_disable {
-    border-color:red;
+/* Define our suspend/resume key style. */
+.btn_suspend_resume {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our boost key style. */
+.btn_boost {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our delete/confirm/cancel key style. */
+.btn_delete {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our enable/disable/confirm/cancel key style. */
+.btn_enable_disable {
+    border-color:cyan;
     opacity:1;
 }
 /* Define our active 'day' entry key style. */
@@ -45,7 +60,7 @@ html *{
     opacity:0.8;
 }
 /* When a digit button is clicked we keep the key as is. */
-.btn_digit_clicked,  .btn-digit-clicked:focus {
+.btn_digit_clicked,  .btn_digit_clicked:focus {
     color:white;
 }
 /* Define our active 'on at' entry key style. */
@@ -58,8 +73,8 @@ html *{
     border-color:red;
     opacity:1;
 }
-/* Define our active function key style. */
-.btn_function {
+/* Define our active operation key style. */
+.btn_operation {
     border-color:cyan;
 }
 /* Define our active select key style. */

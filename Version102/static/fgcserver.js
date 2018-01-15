@@ -23,12 +23,39 @@ $(document).ready(function (){
     // Start with the main function keyboard.
     switchToKeyboard ("main_function_keyboard");
 
+    /******************************************************************************* 
+    * These are the socketio callbacks.
+    * 
+    * Comments: "messages" from the server are json objects. They have the basic
+    * structure of {"command": "The command", "payload": "The payload"} where
+    * "command" is a string specifying the purpose of the message and "payload" can
+    * be anything. We do a switch on the command and can then process the payload
+    * as required. Commands are as follows:
+    * "zone_check_reply" - the payload is the data for a zone. It is received in
+    * response to a "zone_data_check". We do a "zone_data_check" whenever we have
+    * changed the timers for a zone so that we get the actual state of the zone
+    * with the new timer values.
+    * "zone_data_reply" - the payload is the data for a zone. It is received in
+    * response to a "zone_data_request". We do a "zone_data_request" whenever we have
+    * a zone to display that we have not previously displayed. Once we have received
+    * the data for a zone we keep it in the global allZonesData.
+    * "zone_states" - the payload is the state of every zone. It is received in
+    * response to a "zone_state_request". We do a "zone_state_request" whenever we
+    * want to update the zone keys with the current state of the zones. We indicate
+    * on zones with a green background. If we perform some action that will change
+    * the zone state (e.g. boost, suspend etc) we will flash the key background;
+    * Green if it is going from off to on and red for on to off. Note: we do not
+    * indicate an existing off zone with solid red, only on zones are indicated.
+    * "console_message" - the payload can be anything. The server sends "console_message"
+    * for debug purposes and we simply pass it on to the console.log function.
+    ********************************************************************************/   
+
     // Called when socketio connects.
     socket.on('connect', function() {
         console.log ('Connected');
     });
     
-    // Called when we get a message from server.
+    // Called when we get a socketio message from server.
     socket.on('message', function (msg) {
         // Commands from the server are json strings.
         // Convert received json message to object and run the command.
@@ -56,11 +83,11 @@ $(document).ready(function (){
                 console.log ("ZONEDATA", zoneData);
                 break;
             
-                case "console_message":
+            case "console_message":
                 console.log ("MESSAGE", messageData.payload);
                 break;
 
-                case "zone_states":
+            case "zone_states":
                 allZonesData = JSON.parse(msg).payload;
                 displayStates ();
 
@@ -68,8 +95,23 @@ $(document).ready(function (){
             }
     });
     
-    // Is this a function key?
-    $("#keyboards").on('click', '.btn_function', function (event) {
+    /******************************************************************************* 
+    * These are the keyboard keys callbacks.
+    * 
+    * Comments: We have 20 keys on a 5x4 matrix. Each key is within a button holder
+    * and these are numbered from 1-20, starting at top left. Within each button
+    * holder we place the key that we require for a particular keyboard. We do this
+    * either by replacing the entire keyboard or cloning individual keys into the
+    * correct location. We assign each key or groups of keys different classes so
+    * that when we get a key callback we can easily identify the key and call the
+    * required function. Note that because we are cloning we can have duplicate id
+    * values. This does not cause an issue as the working keyboard is defined in
+    * html as the 1st keyboard and by using the "first" selector only the key on
+    * the 1st keyboard will be accessed.
+    ********************************************************************************/   
+    
+    // Is this a top level operation key?
+    $("#keyboards").on('click', '.btn_operation', function (event) {
         switch (this.id) {
             case "function_heating":
                 // Start on rad select.
@@ -80,42 +122,6 @@ $(document).ready(function (){
                 // which zones are on.
                 socket.send (JSON.stringify ({"command":"zone_state_request"}));
                 break;
-        }
-    });
-        
-    // Is this a zone key?
-    $("#keyboards").on('click', '.btn_zone', function (event) {
-        // The 1st zone key we get we switch to the rad or ufh zone selected keyboard.
-        // Test key5 it will be 'control_set_timer' if we have already done this.
-        if (($("#key5:first .btn_basic").attr("id")) != "control_set_timer") {
-            
-            // Are we on rad or ufh select? Rad is zones 1-14.
-            if (parseInt (this.id.slice (4)) < 15) {
-                // We are selecting rad zones.
-                switchToKeyboard ("rad_zone_selected_keyboard");
-            } else {
-                // We are selecting ufh zones.
-                switchToKeyboard ("ufh_zone_selected_keyboard");
-            }
-        }
-        // Clear the select band from all zone buttons.
-        $("#current_keyboard .btn_zone").removeClass('btn_zone_clicked');
-        // Now set select band for this button.
-        $("#current_keyboard #" + this.id).addClass('btn_zone_clicked');
-        // Show which zones are on with green background.
-        displayStates ();
-    
-        // Have we already loaded this zone? We know if a zone is loaded because
-        // it will have a field of "zone" in it.
-        if ("zone" in allZonesData [this.id]) {
-            // Use the existing data.
-            zoneData = JSON.parse (JSON.stringify (allZonesData [this.id])); 
-            displayZoneTimerInfo ();
-            displayZoneStatus ();
-        } else {
-            // Tell server which zone is required. When it responds the data
-            // will be displayed.
-            socket.send (JSON.stringify({"command":"zone_data_request", "payload":{"zone":this.id}}));
         }
     });
         
@@ -155,49 +161,6 @@ $(document).ready(function (){
                 controlDays ();
                 break;
             
-            case "control_delete":
-                controlDelete (this.id);
-                break;
-                
-            case "control_enable":
-            case "control_disable":
-            controlEnableOrDisable (this.id);
-                break;
-                
-            case "control_resume":
-                // We can only have been suspended if we were timed so put zone
-                // back to timer.
-                zoneData.mode = "timer";
-                zoneData.zone_state = "on";
-                // Flag we have made a change and re-display current status.
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayZoneStatus ();
-                displayStates ();
-                // Change resume key to suspend key.
-                replaceKey ("key15", "suspend_key");
-                break;
-                
-            case "control_suspend":
-                // Suspend key can only be present in timer mode.
-                // Set zone to suspended and off.
-                zoneData.mode = "suspended";
-                zoneData.zone_state = "off";
-                // Flag we have made a change and re-display current status.
-                zoneData.update = "pending";
-                allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
-                displayZoneStatus ();
-                displayStates ();
-                // Change suspend key to resume key.
-                replaceKey ("key15", "resume_key");
-                break;
-                
-            case "control_boost_1_hour":
-            case "control_boost_2_hours":
-            case "control_boost_off":
-                controlBoost (this.id);
-                break;
-                
             case "control_new":
                 // Create and display  a new entry at the end of current entries.
                 zoneData.timers.push ({"on_at":"00:00", "off_at":"00:00",
@@ -213,82 +176,63 @@ $(document).ready(function (){
                 replaceKey ("key18", "delete_key");
                 break;
             
-            case "control_previous":
-            case "control_next":
-                controlPreviousOrNext (this.id);
-                break;
-
             case "control_finished":
-                updateServer ();
-                // Fall through to tidy up.
+                controlFinished ();
+                break;
                 
             case "control_back":
-                // Clear any warning messages and number of entries.
-                $("#bottom_line_left").text ("");
-                $("#display_entries").text ("");
-                // We dump the last keyboard we kept and then 
-                // get the previous keyboard to return to.
-                // Only dump last entry if there are more than 1 entries.
-                if (lastKeyboard.length > 1) {
-                    lastKeyboard.pop();
-                }
-                // Get the keyboard we want to return to and load it.
-                var previousKeyboard = lastKeyboard.pop();
-                switchToKeyboard (previousKeyboard);
-                // If we're on a zone select we need to re-select it and
-                // get the server to check the zone so that we get any
-                // change in state that new timers may have caused.
-                // Checking the zone does not cause the server to change
-                // the actual zone hardware state. This will only happen
-                // when we are "Finished".
-                if ((previousKeyboard == "rad_zone_selected_keyboard")
-                    ||
-                    (previousKeyboard == "ufh_zone_selected_keyboard")) {
-                    $("#current_keyboard #" + zoneData.zone).addClass('btn_zone_clicked');
-                    // Do a zone check this will cause the server to send the zone
-                    // data to us which will then be re-displayed in the callback.
-                    socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
-                }
-                displayStates ();
+                controlBack ();
                 break;
         }
     });
     
+    function show () {
+        //console.log ("EVENTDATA",eventData, typeof (eventData),"THIS",this);
+        console.log ("THIS",this,this.id);
+
+        //    var key = $(this);
+    //    keyId = key.attr("id");
+    //    if (keyId){
+    //        extra = eventData.data.foo;
+    //    } else {
+    //        key = $(eventData);
+    //        keyId = key.attr("id");
+    //    }
+    //    key.addClass('btn_digit_clicked');
+    //    console.log ("KEY",keyId,extra);       
+    }
+    // If this is a basic digit key not being used, just ignore it.
+    $("#keyboards").on('click', '.btn_digit', { foo: "bar" }, show);
+      //  $("#keyboards").on('click', '.btn_digit', function (event) {
+      //      $(this).addClass('btn_digit_clicked');
+      //  show ();
+   // });
+
+    // Is this a zone key?
+    // These will be room names.
+    $("#keyboards").on('click', '.btn_zone', processZoneKeys);        
     // Is this an 'on at' time entry key?
     // These will be digits 0-9, plus the 'confirm' and 'cancel' keys.
-    $("#keyboards").on('click', '.btn_on_at_entry', function (event) {
-        $(this).addClass('btn_digit_clicked');
-        processProgrammingKeys (this.id, "inputOnAtDigit");
-    });
-    
+    $("#keyboards").on('click', '.btn_on_at_entry', {field : "inputOnAtDigit"}, processProgrammingKeys);
     // Is this an 'off at' time entry key?
     // These will be digits 0-9, plus the 'confirm' and 'cancel' keys.
-    $("#keyboards").on('click', '.btn_off_at_entry', function (event) {
-    $(this).addClass('btn_digit_clicked');
-        processProgrammingKeys (this.id, "inputOffAtDigit");
-    });
-    
+    $("#keyboards").on('click', '.btn_off_at_entry', {field : "inputOffAtDigit"}, processProgrammingKeys);
     // Is this a 'day' entry key?
     // These will be day keys, plus the 'confirm' and 'cancel' keys.
-    $("#keyboards").on('click', '.btn_day_entry', function (event) {
-        $(this).addClass('btn_digit_clicked');
-        processProgrammingKeys (this.id, "inputDaysDay");
-    });
- 
-    // Is this a 'confirm' or 'cancel' key for a delete operation?
-    $("#keyboards").on('click', '.btn_confirm_cancel_delete', function (event) {
-        //$(this).addClass('btn_digit_clicked');
-        controlDelete (this.id);
-    });
- 
-    // Is this a 'confirm' or 'cancel' key for a timer enable disable operation?
-    $("#keyboards").on('click', '.btn_confirm_cancel_enable_disable', function (event) {
-        //$(this).addClass('btn_digit_clicked');
-        controlEnableOrDisable (this.id);
-    });
- 
+    $("#keyboards").on('click', '.btn_day_entry', {field : "inputDaysDay"}, processProgrammingKeys);    
+    // Is this a 'delete', confirm' or 'cancel' key for a delete operation?
+    $("#keyboards").on('click', '.btn_delete', controlDelete); 
+    // Is this a 'disable, 'enable', confirm' or 'cancel' key for a timer enable disable operation?
+    $("#keyboards").on('click', '.btn_enable_disable', controlEnableOrDisable);
+    // Is this 'suspend' or 'resume' key?
+    $("#keyboards").on('click', '.btn_suspend_resume', controlSuspendOrResume);
+    // Is this 'previous' or 'next' key?
+    $("#keyboards").on('click', '.btn_previous_next', controlPreviousOrNext);
+    // Is this one of the boost keys?
+    $("#keyboards").on('click', '.btn_boost', controlBoost);
+
     /******************************************************************************* 
-    * Function: updateServer ()
+    * Function: controlBack ()
     * 
     * Parameters:
     * 
@@ -299,46 +243,70 @@ $(document).ready(function (){
     * Comments:
     * 
     ********************************************************************************/   
-    function updateServer () {
+    function controlBack () {
+        // Clear any warning messages and number of entries.
+        $("#bottom_line_left").text ("");
+        $("#display_entries").text ("");
+        // We dump the last keyboard we kept and then 
+        // get the previous keyboard to return to.
+        // Only dump last entry if there are more than 1 entries.
+        if (lastKeyboard.length > 1) {
+            lastKeyboard.pop();
+        }
+        // Get the keyboard we want to return to and load it.
+        var previousKeyboard = lastKeyboard.pop();
+        switchToKeyboard (previousKeyboard);
+        // If we're on a zone select we need to re-select the zone and
+        // get the server to check the zone so that we get any
+        // change in state that new timers may have caused.
+        // Checking the zone does not cause the server to change
+        // the actual zone hardware state. This will only happen
+        // when we select "Finished".
+        if ((previousKeyboard == "rad_zone_selected_keyboard")
+            ||
+            (previousKeyboard == "ufh_zone_selected_keyboard")) {
+            $("#current_keyboard #" + zoneData.zone).addClass('btn_zone_clicked');
+            // Do a zone check this will cause the server to send the zone
+            // data to us which will then be re-displayed in the callback.
+            socket.send (JSON.stringify ({"command":"zone_data_check", "payload":zoneData}));
+        }
+        displayStates ();
+    }
+
+    /******************************************************************************* 
+    * Function: controlFinished ()
+    * 
+    * Parameters:
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments: When we have finished programming timers and operations we send all
+    * the new data to the server.
+    * 
+    ********************************************************************************/   
+    function controlFinished () {
         // Scan through all our zones.
         for (var zone in allZonesData) {
-            // Has it been modified?
+            // Has a zone been modified?
             if (allZonesData [zone]["update"] == "pending") {
                 // Flag we sent it.
                 allZonesData [zone]["update"] == "sent";
-
-                // Update the server with the new zone data.
+                // Send the server the new zone data.
                 socket.send (JSON.stringify ({"command":"zone_update", "payload":allZonesData [zone]}));
             }
         }
+        // We dump the last keyboard we kept and then 
+        // get the previous keyboard to return to.
+        // Only dump last entry if there are more than 1 entries.
+        if (lastKeyboard.length > 1) {
+            lastKeyboard.pop();
+        }
+        // Get the keyboard we want to return to and load it.
+        switchToKeyboard (lastKeyboard.pop());
     }
     
-    /******************************************************************************* 
-    * Function: updateEnableDisableKeys ()
-    * 
-    * Parameters:
-    * 
-    * Returns:
-    * 
-    * Globals modified:
-    * 
-    * Comments:
-    * 
-    ********************************************************************************/   
-    function updateEnableDisableKeys () {
-        // Only set key if we have timers.
-        if (zoneData.timer_entries) {
-            // Set enable if we are not enabled and vice versa.
-            if (zoneData.timers [zoneData.timer_selected].enabled) {
-                replaceKey ("key19", "disable_key");
-            } else {
-                replaceKey ("key19", "enable_key");
-            }
-        } else {
-            replaceKey ("key19", "blank_key");
-        }
-    }
-        
     /******************************************************************************* 
     * Function: updatePreviousNextKeys ()
     * 
@@ -355,7 +323,7 @@ $(document).ready(function (){
         
         // If there are no entries blank the 'Previous' and 'Next' keys.
         if (zoneData.timer_entries == 0) {
-            lank_keyreplaceKey ("key5", "b");
+            replaceKey ("key5", "blank_key");
             replaceKey ("key10", "blank_key");
         } else {
             // Get current value of selected index.
@@ -377,23 +345,83 @@ $(document).ready(function (){
     }
 
     /******************************************************************************* 
-    * Function: processProgrammingKeys (keyId, field)
+    * Function: processZoneKeys () - button click handler.
     * 
-    * Parameters:
+    * Parameters: None.
     * 
     * Returns:
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: There are 30 zones, 14 for rads and 16 for ufh. Pressing a zone key
+    * brings us here. We highlight the zone pressed and enable the functions
+    * available for this zone.
     * 
     ********************************************************************************/
-    function processProgrammingKeys (keyId, field) {
+    function processZoneKeys () {
+        // Get the zone key that brought us here.
+        var keyId = this.id;
+        // The 1st zone key we get we switch to the rad or ufh zone selected keyboard.
+        // Test key5 it will be 'control_set_timer' if we have already done this.
+        if (($("#key5:first .btn_basic").attr("id")) != "control_set_timer") {
+            
+            // Are we on rad or ufh select? Rad is zones 1-14.
+            if (parseInt (keyId.slice (4)) < 15) {
+                // We are selecting rad zones.
+                switchToKeyboard ("rad_zone_selected_keyboard");
+            } else {
+                // We are selecting ufh zones.
+                switchToKeyboard ("ufh_zone_selected_keyboard");
+            }
+        }
+        // Clear the select band from all zone buttons.
+        $("#current_keyboard .btn_zone").removeClass('btn_zone_clicked');
+        // Now set select band for this button.
+        $("#current_keyboard #" + keyId).addClass('btn_zone_clicked');
+        // Show which zones are on with green background.
+        displayStates ();
+    
+        // Have we already loaded this zone? We know if a zone is loaded because
+        // it will have a field of "zone" in it.
+        if ("zone" in allZonesData [keyId]) {
+            // Use the existing data.
+            zoneData = JSON.parse (JSON.stringify (allZonesData [keyId])); 
+            displayZoneTimerInfo ();
+            displayZoneStatus ();
+        } else {
+            // Tell server which zone is required. When it responds the data
+            // will be displayed.
+            socket.send (JSON.stringify({"command":"zone_data_request", "payload":{"zone":keyId}}));
+        }
+    }
         
+    /******************************************************************************* 
+    * Function: processProgrammingKeys (event) - button click handler.
+    * 
+    * Parameters: event - click handler parameters passed here.
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments: This is a button click handler. When we are entering on/off/day
+    * digits or confirm/cancel in timer programming mode we will arrive here.
+    * 
+    ********************************************************************************/
+    function processProgrammingKeys (event) {
+        // Get the parameter data. field will tell us if it is on, off or day data.
+        var field = event.data.field;
+        // Keep button the same when clicked.
+        $(this).addClass ('btn_digit_clicked');
+        // Which key?
+        var keyId = this.id;
         switch (keyId) {
             case "control_confirm":
                 // User wants to keep the data.
-                saveProgramEntry (zoneData.timer_selected);
+                var selectedEntry = zoneData.timer_selected;
+                zoneData.timers [selectedEntry].on_at = dataFieldOperation ("readOnAtDigits");
+                zoneData.timers [selectedEntry].off_at = dataFieldOperation ("readOffAtDigits");
+                zoneData.timers [selectedEntry].days = dataFieldOperation ("readDayDays");
                 // Cancel any boost or suspend by going back to timer mode.
                 zoneData.mode = "timer";
                 // Flag we have made a change and save it.
@@ -731,9 +759,44 @@ $(document).ready(function (){
     }
     
     /******************************************************************************* 
-    * Function: controlBoost (keyId)
+    * Function: controlSuspendOrResume ()
     * 
-    * Parameters: keyId - the id assigned to the key.
+    * Parameters: None.
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments: 
+    *
+    ********************************************************************************/
+    function controlSuspendOrResume () {
+        if (this.id == "control_resume") {
+            // We can only have been suspended if we were timed so put zone
+            // back to timer.
+            zoneData.mode = "timer";
+            zoneData.zone_state = "on";
+            // Change resume key to suspend key.
+            replaceKey ("key15", "suspend_key");
+        } else {
+            // Suspend key can only be present in timer mode.
+            // Set zone to suspended and off.
+            zoneData.mode = "suspended";
+            zoneData.zone_state = "off";
+            // Change suspend key to resume key.
+            replaceKey ("key15", "resume_key");
+        }
+        // Flag we have made a change and re-display current status.
+        zoneData.update = "pending";
+        allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
+        displayZoneStatus ();
+        displayStates ();
+    }
+
+    /******************************************************************************* 
+    * Function: controlBoost ()
+    * 
+    * Parameters: None.
     * 
     * Returns:
     * 
@@ -747,9 +810,9 @@ $(document).ready(function (){
     * NB WE NEED TO MODIFY FOR UFH BOOST TIMES
     *
     ********************************************************************************/
-    function controlBoost (keyId) {
+    function controlBoost () {
         
-        switch (keyId) {
+        switch (this.id) {
             case "control_boost_1_hour":
                 // If we are in 'timer' mode and the zone is on add boost to
                 // the off time, othewise add to the current time.
@@ -808,9 +871,9 @@ $(document).ready(function (){
     }
 
     /******************************************************************************* 
-    * Function: controlEnableOrDisable (keyId)
+    * Function: controlEnableOrDisable () - button click handler.
     * 
-    * Parameters: keyId - the id assigned to the key.
+    * Parameters: None.
     * 
     * Returns:
     * 
@@ -820,13 +883,12 @@ $(document).ready(function (){
     * timers and switch between them. This is useful for holiday periods when different
     * times may be required and avoids having to change a timer each time. Pressing
     * enable/disable will activate the confirm and cancel keys with a 
-    * btn_confirm_cancel_enable_disable class. Pressing either of these
+    * btn_enable_disable class. Pressing either of these
     * keys will return us here. We can then either enable/disable the entry or leave
     * as is.
     ********************************************************************************/
-    function controlEnableOrDisable (keyId) {
-        
-        switch (keyId) {
+    function controlEnableOrDisable () {        
+        switch (this.id) {
             case "control_enable":
             case "control_disable":
                 // Use time entry keyboard as base keyboard.
@@ -838,8 +900,10 @@ $(document).ready(function (){
 
                 // Highlight 'confirm' and 'cancel' keys, use enable disable class so that we 
                 // are returned to this function when either key is clicked.
-                $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_enable_disable");
-                $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_enable_disable");
+                $("#control_confirm").toggleClass("btn_select btn_enable_disable");
+                $("#control_cancel").toggleClass("btn_select btn_enable_disable");
+                $("#control_cancel").css("border-color", "red");
+                $("#control_confirm").css("border-color", "red");
                 
                 // Set message for action that will be taken on confirm.
                 var newState = (zoneData.timers [zoneData.timer_selected].enabled) ? "Disabled" : "Enabled";
@@ -866,7 +930,7 @@ $(document).ready(function (){
                 allZonesData [zoneData.zone] = JSON.parse (JSON.stringify (zoneData));
                 // Fall through as all further operations same as cancel.
             
-                case "control_cancel":
+            case "control_cancel":
                 // Move back to program selection keyboard.
                 lastKeyboard.pop();
                 switchToKeyboard (lastKeyboard.pop());
@@ -879,23 +943,21 @@ $(document).ready(function (){
     }
 
     /******************************************************************************* 
-    * Function: controlDelete (keyId)
+    * Function: controlDelete () - button click handler.
     * 
-    * Parameters: keyId - the id assigned to the key.
+    * Parameters:none
     * 
     * Returns:
     * 
     * Globals modified:
     * 
     * Comments: Delete a timer entry. Pressing delete will activate the confirm and
-    * cancel keys with a btn_confirm_cancel_delete class. Pressing either of these
+    * cancel keys with a btn_delete class. Pressing either of these
     * keys will return us here. We can then either delete the entry or leave as is.
     *
     ********************************************************************************/
-
-    function controlDelete (keyId) {
-        
-        switch (keyId) {
+    function controlDelete () {
+        switch (this.id) {
             case "control_delete":
                 // Use time entry keyboard as base keyboard.
                 switchToKeyboard ("time_entry_keyboard");
@@ -904,10 +966,12 @@ $(document).ready(function (){
                 replaceKey ("key19", "confirm_key");
                 replaceKey ("key20", "cancel_key");
 
-                // Highlight 'confirm' and 'cancel' keys, use confirm/cancel/delete class
+                // Highlight 'confirm' and 'cancel' keys, use delete class
                 // so that we are returned to this function when either key is clicked.
-                $("#control_confirm").toggleClass("btn_select btn_confirm_cancel_delete");
-                $("#control_cancel").toggleClass("btn_select btn_confirm_cancel_delete");
+                $("#control_confirm").toggleClass("btn_select btn_delete");
+                $("#control_cancel").toggleClass("btn_select btn_delete");
+                $("#control_cancel").css("border-color", "red");
+                $("#control_confirm").css("border-color", "red");
 
                 // Highlight the whole middle line.
                 $("#middle_line_program > div").css("color", "red");
@@ -946,7 +1010,7 @@ $(document).ready(function (){
     }
 
     /******************************************************************************* 
-    * Function: controlDays ()
+    * Function: controlOnAtOffAtDays ()
     * 
     * Parameters:
     * 
@@ -957,8 +1021,63 @@ $(document).ready(function (){
     * Comments:
     * 
     ********************************************************************************/
+    function controlOnAtOffAtDays () {
+        switch (this.id) {
+            case "control_on_at":
+                //Move to time entry keyboard.
+                switchToKeyboard ("time_entry_keyboard");
+                // Change 'back' key to 'cancel' and highlight.
+                replaceKey ("key20", "cancel_key");
+                $("#control_cancel").toggleClass("btn_select btn_on_at_entry");
+                // Start off with tens of hours valid keys (0,1,2)
+                setActiveDigitKeys ("hoursTens0To2OnAt");
+                // Highlight 'on at' text in display, sets cursor on digit 1.
+                dataFieldOperation ("highlightOnAtDigits");
+                break;
 
-   function controlDays () {
+            case "control_off_at":
+                //Move to time entry keyboard.
+                switchToKeyboard ("time_entry_keyboard");
+                // Change 'back' key to 'cancel' and highlight.
+                replaceKey ("key20", "cancel_key");
+                $("#control_cancel").toggleClass("btn_select btn_off_at_entry");
+                // Start off with tens of hours valid keys (0,1,2)
+                setActiveDigitKeys ("hoursTens0To2OffAt");
+                // Highlight 'off at' text in display, sets cursor on digit 1.
+                dataFieldOperation ("highlightOffAtDigits");
+                break;
+
+            case "control_days":
+                //Move to day entry keyboard.
+                switchToKeyboard ("day_select_keyboard");
+                // Change 'back' key to 'cancel' and highlight.
+                replaceKey ("key20", "cancel_key");
+                $("#control_cancel").toggleClass("btn_select btn_day_entry");
+                // Highlight 'days' keys.
+                $("#current_keyboard .btn_day").toggleClass("btn_day btn_day_entry");
+                // Highlight 'days' text in display.
+                dataFieldOperation ("highlightDays");
+        
+                break;
+
+
+    }
+
+    /******************************************************************************* 
+    * Function: controlDays ()
+    * 
+    * Parameters:
+    * 
+    * Returns:
+    * 
+    * Globals modified:
+    * 
+    * Comments: The Days key has been pressed. We load the day entry keyboard and
+    * set up for entering timer days.
+    * 
+    ********************************************************************************/
+
+    function controlDays () {
        
         switchToKeyboard ("day_select_keyboard");
         
@@ -982,7 +1101,8 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: The On At key has been pressed. We load the time entry keyboard and
+    * set up for entering timer on at times.
     * 
     ********************************************************************************/
 
@@ -1010,7 +1130,8 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: The Off At key has been pressed. We load the time entry keyboard and
+    * set up for entering timer off at times.
     * 
     ********************************************************************************/
 
@@ -1030,7 +1151,7 @@ $(document).ready(function (){
     }
         
     /******************************************************************************* 
-    * Function: controlPreviousOrNext (keyId)
+    * Function: controlPreviousOrNext ()
     * 
     * Parameters: keyId - the id assigned to the key.
     * 
@@ -1042,13 +1163,13 @@ $(document).ready(function (){
     * 
     ********************************************************************************/
 
-    function controlPreviousOrNext (keyId) {
+    function controlPreviousOrNext () {
         
         // Get current value of index to program entry.
         var selectedEntry = zoneData.timer_selected;
 
         // Check if previous or next key.
-        if (keyId == "control_previous") {
+        if (this.id == "control_previous") {
             // Previous key. If we're not at the first entry dec index.
             if (selectedEntry > 1) {
                 selectedEntry--;
@@ -1068,26 +1189,6 @@ $(document).ready(function (){
     }
     
     /******************************************************************************* 
-    * Function: saveProgramEntry (entry)
-    * 
-    * Parameters:
-    * 
-    * Returns:
-    * 
-    * Globals modified:
-    * 
-    * Comments:
-    * 
-    ********************************************************************************/
-
-    function  saveProgramEntry (selectedEntry) {
-        
-        zoneData.timers [selectedEntry].on_at = dataFieldOperation ("readOnAtDigits");
-        zoneData.timers [selectedEntry].off_at = dataFieldOperation ("readOffAtDigits");
-        zoneData.timers [selectedEntry].days = dataFieldOperation ("readDayDays");
-    }
-    
-    /******************************************************************************* 
     * Function: displayProgramEntry ()
     * 
     * Parameters: 
@@ -1096,7 +1197,9 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Uses the middle line of the display to show the current data for the
+    * selected timer. If there are no timers then we remove any invalid keys and
+    * tell user.
     * 
     ********************************************************************************/
 
@@ -1106,14 +1209,15 @@ $(document).ready(function (){
         $("#display_entries").text ("");
         $("#middle_line_program > div").text("");
         
-        // If there are no entries tell the user.
+        // If there are no entries tell the user and remove invalid keys.
         if (zoneData.timer_entries == 0) {
             $("#middle_line_program #status_text").text ("'New' to create a timer");
-            // Remove the 'on at', 'off at', 'days' and 'delete' keys.
+            // Remove the 'on at', 'off at', 'days', 'enable' and 'delete' keys.
             replaceKey ("key4", "blank_key");
             replaceKey ("key9", "blank_key");
             replaceKey ("key14", "blank_key");
             replaceKey ("key18", "blank_key");
+            replaceKey ("key19", "blank_key");
         } else {
             // Get the timer number are we working on.
             var selectedEntry = zoneData.timer_selected;
@@ -1125,7 +1229,7 @@ $(document).ready(function (){
             $("#middle_line_program #days_text").text ("\xa0" + "On days" + "\xa0");
             dataFieldOperation ("updateDaysDay", zoneData.timers [selectedEntry].days);
             
-            // Tell user if it is valid.
+            // Tell user if it is a valid timer.
             checkIfValidTimes ();
             
             // Display number of program entries on the right of the middle line.
@@ -1134,11 +1238,16 @@ $(document).ready(function (){
                                         " of " +
                                         zoneData.timer_entries +
                                         ")");
-        }
-        // Display previous and next keys as required.
-        updatePreviousNextKeys ();
-        // Update enable or disable key now we are on new timer.
-        updateEnableDisableKeys ();
+
+            // Set enable key if we are not enabled and vice versa.
+            if (zoneData.timers [selectedEntry].enabled) {
+                replaceKey ("key19", "disable_key");
+            } else {
+                replaceKey ("key19", "enable_key");
+            }
+            // Display previous and next keys as required.
+            updatePreviousNextKeys ();
+        }   
     }
     
     /******************************************************************************* 
@@ -1150,7 +1259,10 @@ $(document).ready(function (){
     * 
     * Globals modified:
     * 
-    * Comments:
+    * Comments: Checks to see if a timer has valid times and days. We also check to
+    * see if the timer has any overlap with another timer for this zone. We regard
+    * this as a valid situation as it is possible the user may want to have timers
+    * covering the same time period and then enable them as required.
     * 
     ********************************************************************************/
 
@@ -1407,7 +1519,7 @@ $(document).ready(function (){
             // If we are in timer or suspended mode there will be times to display.
             if ((zoneData.timer_entries)
                  &&
-                (zoneData.timers [zoneData.timer_selected].enabled)
+                (zoneData.timers [zoneData.timer_active].enabled)
                  &&
                 (zoneData.next_on_time != zoneData.next_off_time)) {
                 // Is this an 'on' or 'suspended'?
