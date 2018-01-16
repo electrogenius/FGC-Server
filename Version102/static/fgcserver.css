@@ -24,6 +24,36 @@ html *{
 .btn_day {
     border-color:grey;
 }
+/* Define our rads or ufh key style. */
+.btn_rads_ufh {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our set timer key style. */
+.btn_set_timer {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our new key style. */
+.btn_new {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our back key style. */
+.btn_back {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our heating finished key style. */
+.btn_heating_finished {
+    border-color:cyan;
+    opacity:1;
+}
+/* Define our on at/off at/days key style. */
+.btn_on_off_days {
+    border-color:cyan;
+    opacity:1;
+}
 /* Define our previous/next key style. */
 .btn_previous_next {
     border-color:cyan;
