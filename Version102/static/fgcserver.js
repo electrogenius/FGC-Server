@@ -77,10 +77,10 @@ $(document).ready(function (){
                     zoneData.last_zone_state = zoneData.zone_state;
                     allZonesData [zoneData.zone].last_zone_state = zoneData.zone_state;
                 }
+                console.log ("ZONEDATA", zoneData);
                 displayZoneTimerInfo ();
                 displayZoneStatus ();
                 displayStates ();
-                console.log ("ZONEDATA", zoneData);
                 break;
             
             case "console_message":
@@ -1450,7 +1450,7 @@ $(document).ready(function (){
             replaceKey ("key10", "boost_1_hour_key");
             
             console.log ("ON TIME ",zoneData.next_on_time);
-            console.log ("OFF TIME ",zoneData.next_off_tim);
+            console.log ("OFF TIME ",zoneData.next_off_time);
             console.log ("ENABLED  ",zoneData.timers [zoneData.timer_active].enabled);
             console.log ("ENTRIES  ",zoneData.timer_entries);
             // If we have an active valid timer there will be times to display.
@@ -1473,8 +1473,10 @@ $(document).ready(function (){
                 
                 }
             } else {
-                // We are timed off.  We will display the next on time.
-                status += ("until " + onTime);
+                // No active timer. We will display the next on time if we have one.
+                if (zoneData.next_on_time) {
+                    status += ("until " + onTime);
+                }
             }
                 
         }
