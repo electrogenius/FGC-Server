@@ -195,13 +195,20 @@ def checkTimedZone (zoneData):
                     zoneData ["next_off_time"] = CreateUtcEntry (localTime, timerOffAt, 0 )
                     # Set active timer flag.
                     zoneData ["timer_active"] = timer  
-                    # If we are "suspended" we will leave zone off.
+                    # If we are NOT "suspended" we will set zone on.
                     if mode != "suspended":
                         # Set zone on.
                         zoneData ["zone_state"] = "on"
-                    # Now leave as we are within a timer and we have set the
+                    # Now leave as we are on within a timer and we have set the
                     # off time to the last of any overlapping timers.
                     break
+            else:
+                # We have checked every timer and not found one that is on.
+                # It is possible that a timer was suspended so we will clear
+                # "suspended" by setting mode back to "timer" because you
+                # cannot have a suspended off.
+                zoneData ["mode"] = "timer"
+            
         
         # We always get the next on time. This will either be the next on if
         # we are timed off or the next on if we are timed on. The latter is

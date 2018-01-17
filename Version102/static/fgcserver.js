@@ -80,7 +80,7 @@ $(document).ready(function (){
                 displayZoneTimerInfo ();
                 displayZoneStatus ();
                 displayStates ();
-                //console.log ("ZONEDATA", zoneData);
+                console.log ("ZONEDATA", zoneData);
                 break;
             
             case "console_message":
@@ -1448,31 +1448,35 @@ $(document).ready(function (){
         } else {
             // Not on boost so display boost 1 hour key.
             replaceKey ("key10", "boost_1_hour_key");
-            // If we are in timer or suspended mode there will be times to display.
-            if ((zoneData.timer_entries)
-                 &&
-                (zoneData.timers [zoneData.timer_active].enabled)
-                 &&
+            
+            console.log ("ON TIME ",zoneData.next_on_time);
+            console.log ("OFF TIME ",zoneData.next_off_tim);
+            console.log ("ENABLED  ",zoneData.timers [zoneData.timer_active].enabled);
+            console.log ("ENTRIES  ",zoneData.timer_entries);
+            // If we have an active valid timer there will be times to display.
+            if ((zoneData.timer_active)
+                &&
                 (zoneData.next_on_time != zoneData.next_off_time)) {
-                // Is this an 'on' or 'suspended'?
+                
+                // Are we 'on' or are we 'suspended'?
                 if (zoneData.zone_state == "on") {
                     // We are 'on' so set 'suspend' key active.
                     replaceKey ("key15", "suspend_key");
                     // We will display the next off time.
                     status += ("until " + offTime);
                     
-                } else if (zoneData.mode == "suspended") {
-                    // We are 'suspended' so set 'resume' key active.
+                } else {
+                    // We must be 'suspended' so set 'resume' key active.
                     replaceKey ("key15", "resume_key");
                     // We will display the next on time.
                     status += ("(suspended) until " + onTime);
                 
-                } else {
-                    // We are timed off.  We will display the next on time.
-                    status += ("until " + onTime);
                 }
-                
+            } else {
+                // We are timed off.  We will display the next on time.
+                status += ("until " + onTime);
             }
+                
         }
         // Clear the line and display status.
         $("#middle_line_program > div").text ("");
