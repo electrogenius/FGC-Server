@@ -1,1 +1,0 @@
-{"name": "Rad Bed 1", "zone": "zone1", "timer_entries": 1, "update": "completed", "zone_state": "off", "debug_text": "", "command": "zone_update", "next_off_time": 1513195200, "boost_off_time": 1513202400, "timer_active": 0, "timers": [{}, {"on_at": "08:00", "days": "MTWTFSS", "off_at": "10:00"}], "mode": "timer", "next_on_time": 1513238400, "timer_selected": 1}

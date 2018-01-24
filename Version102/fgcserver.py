@@ -52,11 +52,10 @@ zoneNames = {
 allZonesData = {}
 
 
-app = Flask (__name__ )
-#app.config['SECRET_KEY'] = 'mysecret'
-socketio = SocketIO (app)
+#app = Flask (__name__ )
+#socketio = SocketIO (app)
 #thread = None
-zoneDataLock = Lock ()
+#zoneDataLock = Lock ()
 
 # Need to do this as cloud 9 gives wrong time otherwise.
 #os.environ ['TZ'] = "Europe/London"
@@ -325,42 +324,6 @@ def sendZoneStates ():
 
 ################################################################################
 #
-# Function: checkZonesThread ()
-#
-# Parameters:
-#
-# Returns:
-#
-# Globals modified:
-#
-# Comments: 
-#
-################################################################################
-
-def checkZonesThread ():
-    
-    while True:
-        # We will do a check about every second.
-        socketio.sleep (1)
-        # We mustn't alter data if other thread is using it.
-        with zoneDataLock :
-            #  We check boost 1st as it overrides timers.
-            checkForBoostZones ()
-            # Now check for timed zones.
-            for zoneNumber in allZonesData :
-                # Note allZonesData passed by reference so it is modified by
-                # checkTimedZone function.
-                checkTimedZone (allZonesData [zoneNumber])
-
-
-def sendConsoleMessage (message) :
-    send (json.dumps ({"command":"console_message", "payload":message}))
-
-
-
-                
-################################################################################
-#
 # Function: loadZones ()
 #
 # Parameters: None
@@ -401,6 +364,42 @@ def loadZones ():
 
 ################################################################################
 #
+# Function: checkZonesThread ()
+#
+# Parameters:
+#
+# Returns:
+#
+# Globals modified:
+#
+# Comments: 
+#
+################################################################################
+
+def checkZonesThread ():
+    
+    while True:
+        # We will do a check about every second.
+        socketio.sleep (1)
+        # We mustn't alter data if other thread is using it.
+        with zoneDataLock :
+            #  We check boost 1st as it overrides timers.
+            checkForBoostZones ()
+            # Now check for timed zones.
+            for zoneNumber in allZonesData :
+                # Note allZonesData passed by reference so it is modified by
+                # checkTimedZone function.
+                checkTimedZone (allZonesData [zoneNumber])
+
+
+def sendConsoleMessage (message) :
+    send (json.dumps ({"command":"console_message", "payload":message}))
+
+
+
+                
+################################################################################
+#
 # Function: handleMessage()
 #
 # Parameters:
@@ -412,6 +411,12 @@ def loadZones ():
 # Comments: 
 #
 ################################################################################
+
+app = Flask (__name__ )
+#app.config['SECRET_KEY'] = 'mysecret'
+socketio = SocketIO (app)
+zoneDataLock = Lock ()
+
 
 @socketio.on('message')
 def handleMessage(msg):
@@ -445,15 +450,17 @@ def handleMessage(msg):
             print ("STATE")
             sendZoneStates ()
         
- 
+
+
 @app.route("/")
 def hello():
-   return render_template("fgcserver.html")
+    print ("LOGGED IN")
+    return render_template("fgcserver.html")
  
 if __name__ == "__main__":
     # Read all the zone files into allZonesData. 
     loadZones ()
-    # When we have all the zone data start task to check for zone operation.
+    # When we have all the zone data start task to check zone operation.
     socketio.start_background_task (target = checkZonesThread)     
     #app.run(host='0.0.0.0', port=80, debug=True) 
     socketio.run(app, host='0.0.0.0', port=80, debug=False)
